@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Noticias - v10</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="main-layout">
+        <div class="form-column">
+            <div class="container">
+                <h1>📰 Generador de Contenido Web</h1>
+                <p>Gestiona y genera el código para tus noticias.</p>
+                <hr>
+
+                <div id="tabs-container" class="tabs-container">
+                    <div id="tab-buttons" class="tab-buttons"></div>
+                    <button id="add-tab-btn" class="add-tab-btn">+</button>
+                </div>
+
+                <div id="tab-content-container"></div>
+
+            </div>
+        </div>
+
+        <div class="preview-column">
+            <h2>Vista Previa (Simulación)</h2>
+            <div class="preview-tabs">
+                <button class="preview-tab-btn active" data-target="viewport-preview-individual">Página
+                    Individual</button>
+                <button class="preview-tab-btn" data-target="viewport-preview-index">Miniatura Index</button>
+            </div>
+            <div class="preview-content-container">
+                <iframe id="viewport-preview-individual" class="viewport-preview active"
+                    title="Vista previa de la noticia individual"></iframe>
+                <iframe id="viewport-preview-index" class="viewport-preview"
+                    title="Vista previa de la miniatura del index"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <template id="news-form-template">
+        <form class="news-form">
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="modo_antonio_rossi" name="modo_antonio_rossi">
+                <label for="modo_antonio_rossi">Activar Modo Antonio Rossi</label>
+            </div>
+            <div class="form-group">
+                <label for="titulo">Título: <span class="required-asterisk">*</span></label>
+                <input type="text" id="titulo" name="titulo" placeholder="El título principal de la noticia" required>
+            </div>
+            <div class="form-group">
+                <label for="bajada">Bajada (Opcional):</label>
+                <textarea id="bajada" name="bajada" placeholder="El subtítulo o resumen corto"></textarea>
+            </div>
+
+            <div class="form-group image-group">
+                <label for="imagen_principal">URL Imagen Principal (Opcional):</label>
+                <div class="image-input-controls">
+                    <select class="image-type-selector" name="imagen_principal_type">
+                        <option value="Transporte">Transporte</option>
+                        <option value="Energia">Energia</option>
+                        <option value="AR">Antonio Rossi (AR)</option>
+                    </select>
+                    <input type="url" id="imagen_principal" name="imagen_principal" class="image-url"
+                        placeholder="https://...">
+                    <button type="button" class="show-name-btn">Mostrar Nombre</button>
+                </div>
+                <div class="image-input-feedback">
+                    <div class="image-preview-container">
+                        <img id="image-preview" src="#" alt="Vista previa" class="image-preview hidden" />
+                        <span class="preview-placeholder">Vista Previa</span>
+                    </div>
+                    <div class="filename-display-group">
+                        <label>Nombre Sugerido:</label>
+                        <div class="filename-controls">
+                            <input type="text" class="filename-display" readonly>
+                            <button type="button" class="increment-btn" data-direction="-1">-</button>
+                            <button type="button" class="increment-btn" data-direction="1">+</button>
+                        </div>
+                        <div class="filename-buttons-group">
+                            <button type="button" class="copy-btn copy-filename-btn">Copiar Nombre</button>
+                            <button type="button" class="copy-btn copy-image-btn">Copiar Imagen</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="additional-images-container"></div>
+            <button type="button" class="add-btn">+ Agregar otra Imagen</button>
+
+            <div class="form-group">
+                <label for="epigrafe">Epígrafe Imagen Principal (Opcional):</label>
+                <textarea id="epigrafe" name="epigrafe"
+                    placeholder="Descripción de la foto principal y/o fuente"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="body">Cuerpo de la Noticia: <span class="required-asterisk">*</span></label>
+                <div class="format-buttons">
+                    <button type="button" class="format-btn btn-bold" title="Negrita"><b>B</b></button>
+                    <button type="button" class="format-btn btn-list" title="Lista">Lista</button>
+                </div>
+                <textarea id="body" name="body" class="body-textarea"
+                    placeholder="Pegá aquí los párrafos principales del artículo..." required></textarea>
+                <small>Usa **negrita** y `- ` o `* ` para listas. O usa los botones de formato.</small>
+            </div>
+            <div class="form-group">
+                <label for="fuente">Fuente (Opcional):</label>
+                <input type="text" id="fuente" name="fuente" placeholder="Ej: Diario La Nación, Reuters, etc.">
+            </div>
+            <button type="button" class="main-btn">Generar Código HTML</button>
+
+            <div class="output-area">
+                <h2>Resultados HTML Generados:</h2>
+                <div class="form-group output-group filename-output">
+                    <label for="output_filename">Nombre Archivo HTML:</label>
+                    <input type="text" id="output_filename" readonly>
+                    <button type="button" class="copy-btn" data-target="output_filename">Copiar</button>
+                </div>
+                <div class="form-group output-group">
+                    <label for="output_metatags">Meta Tags (para `
+
+                        <head>`):
+                    </label>
+                    <textarea id="output_metatags" readonly></textarea>
+                    <button type="button" class="copy-btn" data-target="output_metatags">Copiar</button>
+                </div>
+                <div class="form-group output-group">
+                    <label for="output_individual">Código Página Individual:</label>
+                    <textarea id="output_individual" readonly></textarea>
+                    <button type="button" class="copy-btn" data-target="output_individual">Copiar</button>
+                </div>
+                <div class="form-group output-group">
+                    <label for="output_titulos">Código Lista de Títulos:</label>
+                    <textarea id="output_titulos" readonly></textarea>
+                    <button type="button" class="copy-btn" data-target="output_titulos">Copiar</button>
+                </div>
+                <div class="form-group output-group">
+                    <label for="output_index">Código Miniatura (Index):</label>
+                    <textarea id="output_index" readonly></textarea>
+                    <button type="button" class="copy-btn" data-target="output_index">Copiar</button>
+                </div>
+                <div class="form-group output-group output-additional-images-group hidden"
+                    id="output-additional-images-group">
+                    <label for="output_additional_images">Código Imágenes Adicionales:</label>
+                    <textarea id="output_additional_images" readonly></textarea>
+                    <button type="button" class="copy-btn" data-target="output_additional_images">Copiar</button>
+                </div>
+            </div>
+        </form>
+    </template>
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
