@@ -1,4 +1,56 @@
 body { font-family: sans-serif; padding: 0; background-color: #f4f4f4; color: #333; margin: 0; }
+/* --- ESTILOS PARA LOS BOTONES SELECTORES DE TIPO --- */
+.type-buttons-group {
+    display: flex;
+    gap: 0;
+    background-color: #e9ecef;
+    border-radius: 6px;
+    padding: 4px;
+    display: inline-flex;
+    border: 1px solid #ced4da;
+}
+
+.type-btn {
+    background-color: transparent;
+    color: #495057;
+    border: none;
+    padding: 8px 15px;
+    font-size: 0.9em;
+    cursor: pointer;
+    border-radius: 4px;
+    margin: 0;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.type-btn:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+
+/* Estado Activo Genérico */
+.type-btn.active {
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Colores específicos según el valor */
+.type-btn[data-value="Transporte"].active {
+    background-color: #007bff; /* Azul */
+}
+
+.type-btn[data-value="Energia"].active {
+    background-color: #28a745; /* Verde */
+}
+
+.type-btn[data-value="AR"].active {
+    background-color: #dc3545; /* Rojo */
+}
+
+/* Ajuste para que se vea bien en la fila */
+.image-input-controls {
+    align-items: center;
+    flex-wrap: wrap;
+}
 .main-layout { display: flex; flex-wrap: wrap; gap: 30px; padding: 20px; max-width: 1700px; margin: 0 auto; }
 .form-column { flex: 1; min-width: 550px; }
 .preview-column { flex: 1; min-width: 400px; max-width: 800px; position: sticky; top: 20px; align-self: flex-start; height: calc(100vh - 60px); padding: 15px 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow-y: auto; }

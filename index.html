@@ -61,11 +61,14 @@
             <div class="form-group image-group">
                 <label for="imagen_principal">URL Imagen Principal (Opcional):</label>
                 <div class="image-input-controls">
-                    <select class="image-type-selector" name="imagen_principal_type">
-                        <option value="Transporte">Transporte</option>
-                        <option value="Energia">Energia</option>
-                        <option value="AR">Antonio Rossi (AR)</option>
-                    </select>
+                    <div class="type-buttons-group">
+                        <input type="hidden" class="image-type-selector" name="imagen_principal_type"
+                            value="Transporte">
+
+                        <button type="button" class="type-btn active" data-value="Transporte">Transporte</button>
+                        <button type="button" class="type-btn" data-value="Energia">Energía</button>
+                        <button type="button" class="type-btn" data-value="AR">Rossi</button>
+                    </div>
                     <input type="url" id="imagen_principal" name="imagen_principal" class="image-url"
                         placeholder="https://...">
                 </div>

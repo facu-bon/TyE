@@ -21,7 +21,7 @@ function getActiveForm() {
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
     setupGlobalListeners();
-    addTab(); // Crea la primera pestaña e INICIA el nombre automáticamente
+    addTab(); 
     
     window.addEventListener('beforeunload', (event) => {
         event.preventDefault();
@@ -32,20 +32,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- GESTIÓN DE PESTAÑAS ---
 function addTab() {
+    // 1. Guardar estado actual antes de crear nueva
     saveCurrentTabData();
+    
+    // INTENTO DE HERENCIA: Buscar el tipo seleccionado en la pestaña actual (si existe)
+    let inheritedType = 'Transporte';
+    if (activeTabId && newsData[activeTabId]) {
+        // Intentamos leer el tipo de la imagen principal de la pestaña activa
+        const currentForm = getActiveForm();
+        if (currentForm) {
+            const currentTypeInput = currentForm.querySelector('.image-group .image-type-selector');
+            if (currentTypeInput) inheritedType = currentTypeInput.value;
+        }
+    }
+
     const tabId = `tab-${nextTabId}`;
     const contentId = `content-${nextTabId}`;
     const tabIndex = nextTabId;
     nextTabId++;
 
-    // Botón de la pestaña
     const tabButton = document.createElement('button');
     tabButton.id = tabId;
     tabButton.className = 'tab-button';
     tabButton.innerHTML = `Noticia ${tabIndex} <button class="close-tab-btn" title="Cerrar pestaña">&times;</button>`;
     document.getElementById('tab-buttons').appendChild(tabButton);
 
-    // Contenido de la pestaña
     const template = document.getElementById('news-form-template');
     if (!template) { console.error("Template not found!"); return; }
     const clone = template.content.cloneNode(true);
@@ -55,20 +66,30 @@ function addTab() {
     formContainer.className = 'tab-content';
     formContainer.appendChild(clone);
     
-    // Insertar en el DOM
     document.getElementById('tab-content-container').appendChild(formContainer);
     
-    // Configurar eventos
+    // APLICAR HERENCIA: Establecer el tipo en la nueva pestaña
+    const newForm = formContainer.querySelector('form');
+    if (newForm) {
+        // Actualizar input oculto
+        const typeInput = newForm.querySelector('.image-group .image-type-selector');
+        if (typeInput) typeInput.value = inheritedType;
+        
+        // Actualizar visualmente los botones
+        const btns = newForm.querySelectorAll('.image-group .type-btn');
+        btns.forEach(btn => {
+            if (btn.dataset.value === inheritedType) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+    }
+
     setupListenersForTab(formContainer);
     
-    // Inicializar datos
     newsData[tabId] = { id: tabId, data: {} };
     
-    // --- ESTA ES LA SOLUCIÓN AL CAMPO VACÍO ---
-    // Apenas se crea la pestaña, calculamos el nombre automáticamente
-    const form = formContainer.querySelector('form');
-    if(form) {
-        autoUpdateFilename(form);
+    // Generar nombre inicial
+    if(newForm) {
+        autoUpdateFilename(newForm);
     }
 
     switchTab(tabId);
@@ -89,12 +110,6 @@ function switchTab(tabId) {
     
     loadTabData(tabId);
     clearOutputs();
-    
-    // Actualizar previews al cambiar de pestaña
-    const currentData = newsData[tabId]?.data;
-    if (currentData) {
-         // Opcional: refrescar preview si es necesario
-    }
 }
 
 function closeTab(tabId) {
@@ -139,13 +154,12 @@ function saveCurrentTabData() {
     
     dataObject['modo_antonio_rossi'] = form.querySelector('[name="modo_antonio_rossi"]').checked; 
     
-    // Guardar nombre de archivo actual para que no se pierda al cambiar de pestaña
     const filenameDisplay = form.querySelector('.filename-display');
     if(filenameDisplay) dataObject['currentFilename'] = filenameDisplay.value;
 
     dataObject.additionalImages = Array.from(form.querySelectorAll('.additional-image-field')).map(field => ({ 
         url: field.querySelector('.image-url')?.value || '', 
-        type: field.querySelector('.image-type-selector')?.value || 'Transporte',
+        type: field.querySelector('.image-type-selector')?.value || 'Transporte', // Lee del input hidden
         filename: field.querySelector('.filename-display')?.value || ''
     }));
     
@@ -170,12 +184,22 @@ function loadTabData(tabId) {
         } 
     });
     
-    // Restaurar nombre
+    // IMPORTANTE: Sincronizar botones visuales con los valores cargados en los inputs hidden
+    form.querySelectorAll('.image-type-selector').forEach(input => {
+        const val = input.value;
+        const group = input.closest('.type-buttons-group');
+        if (group) {
+            group.querySelectorAll('.type-btn').forEach(btn => {
+                if(btn.dataset.value === val) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+        }
+    });
+
     if(tabData.currentFilename) {
         const fd = form.querySelector('.filename-display');
         if(fd) fd.value = tabData.currentFilename;
     } else {
-        // Si no hay dato guardado (ej. primera carga), asegurar que se genere
         autoUpdateFilename(form);
     }
 
@@ -231,6 +255,12 @@ function setupListenersForTab(formContainer) {
         const target = event.target.closest('button');
         if (!target) return;
 
+        // --- MANEJO DE LOS NUEVOS BOTONES DE TIPO ---
+        if (target.classList.contains('type-btn')) {
+            handleTypeButtonClick(target);
+            return; 
+        }
+
         const isCopyBtn = target.classList.contains('copy-btn') || target.classList.contains('copy-filename-btn');
         if (!isCopyBtn) event.preventDefault();
 
@@ -242,11 +272,6 @@ function setupListenersForTab(formContainer) {
         else if (target.classList.contains('btn-bold')) handleFormatBold(event);
         else if (target.classList.contains('btn-list')) handleFormatList(event);
         else if (target.classList.contains('main-btn')) generarCodigo();
-        // Nota: Ignoramos el botón 'show-name-btn' ya que ahora es automático, pero si lo presionan no hará nada o podemos re-ejecutar la lógica.
-        else if (target.classList.contains('show-name-btn')) {
-             // Si el usuario presiona el botón, forzamos la actualización manual
-             if(target.closest('.image-group')) autoUpdateFilename(formContainer.querySelector('form'));
-        }
     });
 
     formContainer.querySelectorAll('.image-url').forEach(i => {
@@ -255,27 +280,12 @@ function setupListenersForTab(formContainer) {
         updateImagePreview(i);
     });
 
-    // LISTENER CLAVE 1: Cambio de tipo de imagen (Transporte/Energia/AR)
-    formContainer.querySelectorAll('.image-type-selector').forEach(s => {
-        s.addEventListener('change', (event) => {
-            if (event.target.closest('.image-group')) {
-                // Si cambia el principal, actualiza el nombre principal
-                autoUpdateFilename(event.target.closest('form'));
-            } else {
-                // Si cambia una adicional, actualiza solo esa
-                const field = event.target.closest('.additional-image-field');
-                if(field) autoUpdateAdditionalFilename(field, event.target.closest('form'));
-            }
-        });
-    });
-
-    // LISTENER CLAVE 2: Modo Antonio Rossi
+    // LISTENER CHECKBOX ROSSI (Afecta nombres)
     const rossiCheckbox = formContainer.querySelector('[name="modo_antonio_rossi"]');
     if (rossiCheckbox) {
         rossiCheckbox.addEventListener('change', (event) => {
             handleRossiModeChange(event);
             const form = formContainer.querySelector('form');
-            // Al activar Rossi, se recalcula todo
             autoUpdateFilename(form);
             form.querySelectorAll('.additional-image-field').forEach(field => {
                 autoUpdateAdditionalFilename(field, form);
@@ -284,12 +294,37 @@ function setupListenersForTab(formContainer) {
     }
 }
 
-// --- LÓGICA DE AUTONUMERACIÓN INTELIGENTE ---
+// --- LÓGICA BOTONES DE TIPO ---
+function handleTypeButtonClick(button) {
+    const group = button.closest('.type-buttons-group');
+    const hiddenInput = group.querySelector('.image-type-selector');
+    const newValue = button.dataset.value;
+
+    // 1. Actualizar Input Oculto
+    hiddenInput.value = newValue;
+
+    // 2. Actualizar Visual (Clases Active)
+    group.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
+    button.classList.add('active');
+
+    // 3. Disparar actualización de nombre de archivo
+    const form = button.closest('form');
+    // Verificamos si es imagen principal o adicional
+    if (group.closest('.image-group')) {
+        autoUpdateFilename(form);
+    } else {
+        const field = group.closest('.additional-image-field');
+        if (field) autoUpdateAdditionalFilename(field, form);
+    }
+}
+
+
+// --- LÓGICA DE AUTONUMERACIÓN ---
 function autoUpdateFilename(form) {
     if (!form) return;
     
     const rossiCheckbox = form.querySelector('[name="modo_antonio_rossi"]');
-    const typeSelector = form.querySelector('.image-type-selector'); // Selector principal
+    const typeInput = form.querySelector('.image-group .image-type-selector'); // Input oculto
     const filenameDisplay = form.querySelector('.image-group .filename-display');
 
     if (!filenameDisplay) return;
@@ -297,14 +332,12 @@ function autoUpdateFilename(form) {
     let tipo = 'Transporte'; 
     if (rossiCheckbox && rossiCheckbox.checked) {
         tipo = 'AR';
-    } else if (typeSelector) {
-        tipo = typeSelector.value;
+    } else if (typeInput) {
+        tipo = typeInput.value;
     }
 
     const hoy = new Date();
     const fechaArchivo = `${hoy.getFullYear()}-${(hoy.getMonth() + 1).toString().padStart(2, '0')}-${hoy.getDate().toString().padStart(2, '0')}`;
-
-    // Busca el siguiente índice libre globalmente
     const nextIndex = getNextAvailableIndex(tipo, fechaArchivo);
     
     filenameDisplay.value = `${fechaArchivo}-${tipo}${nextIndex.toString().padStart(3, '0')}.jpg`;
@@ -312,7 +345,7 @@ function autoUpdateFilename(form) {
 
 function autoUpdateAdditionalFilename(fieldWrapper, form) {
     const rossiCheckbox = form.querySelector('[name="modo_antonio_rossi"]');
-    const typeSelector = fieldWrapper.querySelector('.image-type-selector');
+    const typeInput = fieldWrapper.querySelector('.image-type-selector'); // Input oculto de la adicional
     const filenameDisplay = fieldWrapper.querySelector('.filename-display');
     
     if (!filenameDisplay) return;
@@ -320,14 +353,12 @@ function autoUpdateAdditionalFilename(fieldWrapper, form) {
     let tipo = 'Transporte';
     if (rossiCheckbox && rossiCheckbox.checked) {
         tipo = 'AR';
-    } else if (typeSelector) {
-        tipo = typeSelector.value;
+    } else if (typeInput) {
+        tipo = typeInput.value;
     }
 
     const hoy = new Date();
     const fechaArchivo = `${hoy.getFullYear()}-${(hoy.getMonth() + 1).toString().padStart(2, '0')}-${hoy.getDate().toString().padStart(2, '0')}`;
-
-    // Para adicionales, también usamos el índice global para asegurar que sean únicos
     const nextIndex = getNextAvailableIndex(tipo, fechaArchivo);
     
     filenameDisplay.value = `${fechaArchivo}-${tipo}${nextIndex.toString().padStart(3, '0')}.jpg`;
@@ -335,24 +366,17 @@ function autoUpdateAdditionalFilename(fieldWrapper, form) {
 
 function getNextAvailableIndex(tipo, fecha) {
     let maxIndex = 0;
-    
-    // Escaneamos TODOS los campos de nombre visibles en todas las pestañas
-    // para encontrar el número más alto usado HOY para este TIPO.
     document.querySelectorAll('.filename-display').forEach(input => {
         if (input.value) {
-            // Regex: Fecha-Tipo(Numero).jpg
-            // Escapamos los guiones
             const pattern = `${fecha}-${tipo}(\\d{3})\\.jpg`;
             const regex = new RegExp(pattern);
             const match = input.value.match(regex);
-            
             if (match) {
                 const num = parseInt(match[1], 10);
                 if (num > maxIndex) maxIndex = num;
             }
         }
     });
-    
     return maxIndex + 1;
 }
 
@@ -370,7 +394,6 @@ function generarCodigo() {
     const form = getActiveForm();
     const filenameInputPrincipal = form.querySelector('.image-group .filename-display');
     
-    // Obtener nombre. Si está vacío por alguna razón, forzar regeneración.
     let imgFilenamePrincipal = filenameInputPrincipal?.value;
     if (!imgFilenamePrincipal) {
         autoUpdateFilename(form);
@@ -391,11 +414,7 @@ function generarCodigo() {
     const bodyProcesado = procesarCuerpo(body);
 
     const outputFilenameEl = form.querySelector('[id="output_filename"]'); 
-    const outputFullHtmlEl = form.querySelector('[id="output_individual"]'); // Nota: Usando el campo 'individual' para el full html o podemos restaurar el campo nuevo si lo agregaste.
-    // Como en tu index.html original tienes output_individual para "Código Página Individual", usaré ese si no existe output_full_html.
-    // Pero espera, queríamos "Página Completa". Voy a inyectarlo en 'output_individual' que parece ser el destino lógico según tu último script, 
-    // OJO: En tu script anterior usabas 'output_individual' para el body parcial y querías cambiarlo. 
-    // Voy a respetar tu HTML actual: output_individual
+    const outputFullHtmlEl = form.querySelector('[id="output_individual"]'); 
     
     const outputTitulosEl = form.querySelector('[id="output_titulos"]'); 
     const outputIndexEl = form.querySelector('[id="output_index"]'); 
@@ -404,7 +423,6 @@ function generarCodigo() {
 
     if (outputFilenameEl) outputFilenameEl.value = filename;
     
-    // Meta Tags
     const metaTitle = titulo.replace(/"/g, '“'); 
     let htmlMetaTags = '';
     if (imgPathIndexFull) htmlMetaTags += `<meta property="og:image" content="${imgPathIndexFull}"/>\n`;
@@ -413,11 +431,9 @@ function generarCodigo() {
     htmlMetaTags += `<meta property="og:url" content="${canonicalUrl}"/>\n`; 
     htmlMetaTags += `<meta property="og:site_name" content="TransporteyEnergia" />`;
 
-    // Si existe el campo metatags en el HTML, lo llenamos también por si acaso
     const outputMetatagsEl = form.querySelector('[id="output_metatags"]');
     if (outputMetatagsEl) outputMetatagsEl.value = htmlMetaTags;
 
-    // Body
     let htmlIndividual = '';
     htmlIndividual += `<h4><span class="sidebar">${fechaSidebar}</span><br/></h4>\n`;
     htmlIndividual += `<Titulo>${titulo}</Titulo><br /><br />\n`;
@@ -448,10 +464,7 @@ function generarCodigo() {
     
     if (htmlAdditionalImagesIndividual) htmlIndividual += htmlAdditionalImagesIndividual; if (fuente) htmlIndividual += `<p>Fuente: ${fuente}</p>\n`; 
     
-    // AQUI GENERAMOS LA PÁGINA COMPLETA
     const htmlPaginaCompleta = construirPaginaCompleta(titulo, htmlMetaTags, htmlIndividual, modo_antonio_rossi);
-    
-    // Inyectamos el HTML completo en el campo 'output_individual' que es el textarea grande visible
     if (form.querySelector('[id="output_individual"]')) {
         form.querySelector('[id="output_individual"]').value = htmlPaginaCompleta;
     }
@@ -676,30 +689,32 @@ function addImageFieldDirect(form, url = '', type = 'Transporte', filename = '')
     const container = form.querySelector('.additional-images-container'); if (!container) return;
     const fieldWrapper = document.createElement('div'); fieldWrapper.className = 'additional-image-field';
     
+    // NOTA: USAMOS EL NUEVO GRUPO DE BOTONES PARA IMÁGENES ADICIONALES
     fieldWrapper.innerHTML = `
-        <div class="image-input-controls"> <select class="image-type-selector" name="imagen_adicional_type_${container.children.length}"> <option value="Transporte">Transporte</option> <option value="Energia">Energia</option> <option value="AR">Antonio Rossi (AR)</option> </select> <input type="url" class="image-url" name="imagen_adicional_url_${container.children.length}" placeholder="https://..."> </div>
+        <div class="image-input-controls"> 
+            <div class="type-buttons-group">
+                <input type="hidden" class="image-type-selector" name="imagen_adicional_type_${container.children.length}" value="${type}">
+                <button type="button" class="type-btn ${type === 'Transporte' ? 'active' : ''}" data-value="Transporte">Transporte</button>
+                <button type="button" class="type-btn ${type === 'Energia' ? 'active' : ''}" data-value="Energia">Energía</button>
+                <button type="button" class="type-btn ${type === 'AR' ? 'active' : ''}" data-value="AR">Rossi</button>
+            </div>
+            <input type="url" class="image-url" name="imagen_adicional_url_${container.children.length}" placeholder="https://..."> 
+        </div>
         <div class="image-input-feedback"> <div class="image-preview-container"> <img src="#" alt="Vista previa adicional" class="image-preview hidden"> <span class="preview-placeholder">Vista Previa</span> </div> <div class="filename-display-group"> <label>Nombre Sugerido:</label> <div class="filename-controls"> <input type="text" class="filename-display" readonly> <button type="button" class="increment-btn" data-direction="-1">-</button> <button type="button" class="increment-btn" data-direction="1">+</button> </div> <button type="button" class="copy-btn copy-filename-btn">Copiar Nombre</button> <button type="button" class="copy-btn copy-image-btn">Copiar Imagen</button> </div> </div>
         <button type="button" class="remove-btn">Eliminar</button> `;
     container.appendChild(fieldWrapper);
     const newUrlInput = fieldWrapper.querySelector('.image-url');
-    const newTypeSelect = fieldWrapper.querySelector('.image-type-selector');
     const newFilename = fieldWrapper.querySelector('.filename-display');
     
     newUrlInput.value = url;
-    newTypeSelect.value = type;
     if(filename) newFilename.value = filename;
     
     newUrlInput.addEventListener('input', updateImagePreviewHandler);
     newUrlInput.addEventListener('change', updateImagePreviewHandler);
     
-    newTypeSelect.addEventListener('change', (event) => { 
-        autoUpdateAdditionalFilename(fieldWrapper, form);
-    });
-    
     fieldWrapper.querySelector('.remove-btn').onclick = () => removeImageField(fieldWrapper);
     updateImagePreview(newUrlInput);
     
-    // Generar nombre automático al crear
     if(!filename) autoUpdateAdditionalFilename(fieldWrapper, form);
 }
 function removeImageField(fieldWrapper) { fieldWrapper.remove(); const activeForm = getActiveForm(); if (activeForm && activeForm.querySelectorAll('.additional-image-field').length === 0) { document.getElementById('output-additional-images-group')?.classList.add('hidden'); } }
