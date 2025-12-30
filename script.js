@@ -27,11 +27,13 @@ function addTab() {
     const contentId = `content-${nextTabId}`;
     const tabIndex = nextTabId;
     nextTabId++;
+
     const tabButton = document.createElement('button');
     tabButton.id = tabId;
     tabButton.className = 'tab-button';
     tabButton.innerHTML = `Noticia ${tabIndex} <button class="close-tab-btn" title="Cerrar pestaña">&times;</button>`;
     document.getElementById('tab-buttons').appendChild(tabButton);
+
     const template = document.getElementById('news-form-template');
     if (!template) { console.error("Template not found!"); return; }
     const clone = template.content.cloneNode(true);
@@ -39,6 +41,7 @@ function addTab() {
     formContainer.id = contentId;
     formContainer.className = 'tab-content';
     formContainer.appendChild(clone);
+    setupListenersForTab(formContainer);
     document.getElementById('tab-content-container').appendChild(formContainer);
     newsData[tabId] = { id: tabId, data: {} };
     switchTab(tabId);
@@ -57,9 +60,10 @@ function switchTab(tabId) {
     clearOutputs();
     updateViewportPreview(document.getElementById('viewport-preview-individual'), '', false, false);
     updateViewportPreview(document.getElementById('viewport-preview-index'), '', false, true);
-    if (contentToShow) {
+/* if (contentToShow) {
         setupListenersForTab(contentToShow);
     }
+    */
 }
 
 function closeTab(tabId) {
@@ -76,8 +80,12 @@ function closeTab(tabId) {
 }
 function renumberTabs() {
     document.querySelectorAll('.tab-button').forEach((btn, index) => {
-        const closeBtnHTML = btn.querySelector('.close-tab-btn')?.outerHTML || ''; btn.textContent = `Noticia ${index + 1} `; if (closeBtnHTML) btn.insertAdjacentHTML('beforeend', closeBtnHTML);
-        const closeButton = btn.querySelector('.close-tab-btn'); if (closeButton) { closeButton.onclick = (e) => { e.stopPropagation(); closeTab(btn.id); }; }
+        // Guardamos el HTML del botón de cerrar si existe
+        const closeBtnHTML = btn.querySelector('.close-tab-btn')?.outerHTML || ''; 
+        
+        // Reescribimos el texto manteniendo el botón de cerrar
+        // NOTA: Dejamos un espacio al final del texto para separar la X
+        btn.innerHTML = `Noticia ${index + 1} ${closeBtnHTML}`;
     });
 }
 
@@ -92,26 +100,52 @@ function loadTabData(tabId) {
 }
 
 function setupListenersForTab(formContainer) {
-    formContainer.onclick = function (event) {
+    // Usamos addEventListener en lugar de .onclick para mayor seguridad
+    formContainer.addEventListener('click', function (event) {
         const target = event.target.closest('button');
+        
+        // Si no se hizo clic en un botón, no hacemos nada
         if (!target) return;
 
+        // 1. Evitar comportamiento por defecto (submit) excepto para botones de copiar
+        // (Los botones de copiar a veces necesitan comportamiento nativo o se manejan aparte)
         const isCopyBtn = target.classList.contains('copy-btn') || target.classList.contains('copy-filename-btn');
         if (!isCopyBtn) {
             event.preventDefault();
         }
 
-        if (target.classList.contains('copy-filename-btn')) handleCopyClick(event);
-        else if (target.classList.contains('copy-image-btn')) handleCopyImageClick(event);
-        else if (target.classList.contains('show-name-btn')) handleShowNameClick(event);
-        else if (target.classList.contains('increment-btn')) handleIncrementClick(event);
-        else if (target.classList.contains('add-btn')) addImageField(target);
-        else if (target.classList.contains('remove-btn')) removeImageField(target.closest('.additional-image-field'));
-        else if (target.classList.contains('btn-bold')) handleFormatBold(event);
-        else if (target.classList.contains('btn-list')) handleFormatList(event);
-        else if (target.classList.contains('main-btn')) generarCodigo();
-    };
+        // 2. Router de Acciones: Decidir qué hacer según la clase del botón
+        if (target.classList.contains('copy-filename-btn')) {
+            handleCopyClick(event);
+        }
+        else if (target.classList.contains('copy-image-btn')) {
+            handleCopyImageClick(event);
+        }
+        else if (target.classList.contains('show-name-btn')) {
+            handleShowNameClick(event);
+        }
+        else if (target.classList.contains('increment-btn')) {
+            handleIncrementClick(event);
+        }
+        else if (target.classList.contains('add-btn')) {
+            addImageField(target);
+        }
+        else if (target.classList.contains('remove-btn')) {
+            removeImageField(target.closest('.additional-image-field'));
+        }
+        else if (target.classList.contains('btn-bold')) {
+            handleFormatBold(event);
+        }
+        else if (target.classList.contains('btn-list')) {
+            handleFormatList(event);
+        }
+        else if (target.classList.contains('main-btn')) {
+            // ESTA es la línea crítica que probablemente faltaba o estaba bloqueada
+            generarCodigo();
+        }
+    });
 
+    // Listeners para inputs de imagen (se mantienen igual que antes)
     formContainer.querySelectorAll('.image-url').forEach(i => {
         i.addEventListener('input', updateImagePreviewHandler, { passive: true });
         i.addEventListener('change', updateImagePreviewHandler);
@@ -128,37 +162,99 @@ function setupListenersForTab(formContainer) {
     formContainer.querySelectorAll('.show-name-btn').forEach(b => showImageName(b));
 
     const rossiCheckbox = formContainer.querySelector('[name="modo_antonio_rossi"]');
-    rossiCheckbox.addEventListener('change', (event) => {
-        handleRossiModeChange(event);
-        formContainer.querySelectorAll('.show-name-btn').forEach(btn => showImageName(btn, true));
-    });
-    handleRossiModeChange({ target: rossiCheckbox });
+    if (rossiCheckbox) {
+        rossiCheckbox.addEventListener('change', (event) => {
+            handleRossiModeChange(event);
+            formContainer.querySelectorAll('.show-name-btn').forEach(btn => showImageName(btn, true));
+        });
+        // Inicializar estado visual
+        handleRossiModeChange({ target: rossiCheckbox });
+    }
 }
-
 function setupGlobalListeners() {
-    document.querySelector('.output-area').addEventListener('click', (event) => {
-        const button = event.target.closest('button.copy-btn');
-        if (button && button.hasAttribute('data-target')) {
+    // 1. Delegación de eventos para las pestañas (Navegación y Cierre)
+    const tabContainer = document.getElementById('tab-buttons');
+    
+    tabContainer.addEventListener('click', (event) => {
+        // A. Detectar clic en el botón de cerrar (X)
+        const closeBtn = event.target.closest('.close-tab-btn');
+        if (closeBtn) {
+            event.stopPropagation(); // Evitar que el clic active la pestaña al cerrarla
+            const tabBtn = closeBtn.closest('.tab-button');
+            if (tabBtn) {
+                closeTab(tabBtn.id);
+            }
+            return;
+        }
+
+        // B. Detectar clic en la pestaña para navegar
+        const tabBtn = event.target.closest('.tab-button');
+        if (tabBtn) {
+            // Solo cambiar si no es la pestaña activa
+            if (!tabBtn.classList.contains('active')) {
+                switchTab(tabBtn.id);
+            }
+        }
+    });
+
+    // 2. Botón para agregar nueva pestaña
+    document.getElementById('add-tab-btn').onclick = addTab;
+
+    // 3. Manejo de botones de copiado (Output Area) - Corrección del error anterior
+    // Usamos delegación en el documento porque .output-area se crea dinámicamente o está en template
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+
+        // Detectar botones de copiado en el área de resultados
+        if (button.classList.contains('copy-btn') && button.hasAttribute('data-target')) {
             handleCopyClick(event);
         }
     });
-    document.getElementById('add-tab-btn').onclick = addTab;
+
+    // 4. Lógica de vista previa (Mobile/Desktop tabs)
     document.querySelector('.preview-tabs').addEventListener('click', (event) => {
-        const button = event.target.closest('.preview-tab-btn'); if (!button) return; event.preventDefault();
-        const isActive = button.classList.contains('active'); if (isActive) return;
+        const button = event.target.closest('.preview-tab-btn'); 
+        if (!button) return; 
+        
+        event.preventDefault();
+        const isActive = button.classList.contains('active'); 
+        if (isActive) return;
+        
         document.querySelectorAll('.preview-tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.viewport-preview').forEach(vp => vp.classList.remove('active'));
-        button.classList.add('active'); const targetId = button.getAttribute('data-target');
-        const targetViewport = document.getElementById(targetId); if (targetViewport) targetViewport.classList.add('active');
+        
+        button.classList.add('active'); 
+        const targetId = button.getAttribute('data-target');
+        const targetViewport = document.getElementById(targetId); 
+        
+        if (targetViewport) targetViewport.classList.add('active');
+        
         const isRossi = getActiveForm()?.querySelector('[name="modo_antonio_rossi"]')?.checked || false;
         document.querySelectorAll('.preview-tab-btn.active').forEach(btn => btn.classList.toggle('rossi-mode', isRossi));
     });
 }
 
 function handleCopyClick(event) {
-    event.preventDefault(); const button = event.target.closest('button'); if (!button) return; let targetElement;
-    if (button.classList.contains('copy-filename-btn')) { targetElement = button.closest('.filename-display-group').querySelector('.filename-display'); }
-    else { const targetId = button.getAttribute('data-target'); targetElement = document.getElementById(targetId); }
+    event.preventDefault(); 
+    const button = event.target.closest('button'); 
+    if (!button) return; 
+    
+    let targetElement;
+    
+    // Caso 1: Botón "Copiar Nombre" de la imagen
+    if (button.classList.contains('copy-filename-btn')) { 
+        targetElement = button.closest('.filename-display-group').querySelector('.filename-display'); 
+    }
+    // Caso 2: Botones de Output (HTML Generado)
+    else { 
+        const targetId = button.getAttribute('data-target');
+        // Buscamos el elemento DENTRO del mismo formulario donde está el botón
+        const form = button.closest('form');
+        // Usamos selector de atributo para encontrar el ID duplicado dentro de este form
+        targetElement = form.querySelector(`[id="${targetId}"]`); 
+    }
+    
     copyToClipboard(targetElement, button);
 }
 async function handleCopyImageClick(event) {
@@ -206,16 +302,34 @@ function handleFormatList(event) {
 function generarCodigo() {
     saveCurrentTabData();
     const currentData = newsData[activeTabId]?.data;
+    
+    // Validación básica
     if (!currentData) { alert("Error: No se encontraron datos."); return; }
+    
     const { titulo = '', imagen_principal = '', body = '', modo_antonio_rossi = false, bajada = '', imagen_principal_type = 'Transporte', epigrafe = '', fuente = '', additionalImages = [] } = currentData;
+    
     if (!titulo || !body) { alert("Completa Título y Cuerpo."); return; }
-    const hoy = new Date(); const anio = hoy.getFullYear(); const mes = (hoy.getMonth() + 1).toString().padStart(2, '0'); const dia = hoy.getDate().toString().padStart(2, '0'); const fechaSidebar = `${dia}/${mes}/${anio.toString().substr(-2)}`; const fechaArchivo = `${anio}-${mes}-${dia}`; const fechaListaTitulos = `${dia}.${mes}.${anio.toString().substr(-2)}`; const slug = slugify(titulo);
+
+    // --- Lógica de Fechas y Slugs (Igual que antes) ---
+    const hoy = new Date(); 
+    const anio = hoy.getFullYear(); 
+    const mes = (hoy.getMonth() + 1).toString().padStart(2, '0'); 
+    const dia = hoy.getDate().toString().padStart(2, '0'); 
+    const fechaSidebar = `${dia}/${mes}/${anio.toString().substr(-2)}`; 
+    const fechaArchivo = `${anio}-${mes}-${dia}`; 
+    const fechaListaTitulos = `${dia}.${mes}.${anio.toString().substr(-2)}`; 
+    const slug = slugify(titulo);
+    
     imageCounters = {};
-    const form = getActiveForm();
+    const form = getActiveForm(); // Referencia vital
+    
+    // --- Lógica de Imágenes (Igual que antes) ---
     const filenameInputPrincipal = form.querySelector('.image-group .filename-display');
     let imgFilenamePrincipal = filenameInputPrincipal?.value || (imagen_principal ? generateImageFilename(fechaArchivo, modo_antonio_rossi ? 'AR' : imagen_principal_type, 1) : '');
     if (filenameInputPrincipal && !filenameInputPrincipal.value && imgFilenamePrincipal) filenameInputPrincipal.value = imgFilenamePrincipal;
+    
     let filename, urlIndividual, urlIndex, imgPathIndex, carpetaIndex, imgPathIndividual, urlTitulosRossi, canonicalUrl, imgPathIndexFull;
+    
     if (modo_antonio_rossi) {
         filename = `${slug}.html`; urlIndex = `Antonio-Rossi/${anio}/${filename}`; urlIndividual = `../../${urlIndex}`; urlTitulosRossi = `../../Antonio-Rossi/${anio}/${filename}`; carpetaIndex = 'Imagenes/ImgAntonio/'; imgPathIndividual = imgFilenamePrincipal ? `../../../${carpetaIndex}${imgFilenamePrincipal}` : ''; imgPathIndex = imgFilenamePrincipal ? (carpetaIndex + imgFilenamePrincipal) : '';
     } else {
@@ -224,42 +338,70 @@ function generarCodigo() {
         imgPathIndividual = imgFilenamePrincipal ? `../../${carpetaIndex}${imgFilenamePrincipal}` : '';
         imgPathIndex = imgFilenamePrincipal ? (carpetaIndex + imgFilenamePrincipal) : '';
     }
+    
     canonicalUrl = `${BASE_URL}/Noticias/${urlIndex}`;
     imgPathIndexFull = imgPathIndex ? `${BASE_URL}/${imgPathIndex}` : '';
     const bodyProcesado = procesarCuerpo(body);
-    const outputFilenameEl = document.getElementById('output_filename'); const outputMetatagsEl = document.getElementById('output_metatags'); const outputTitulosEl = document.getElementById('output_titulos'); const outputIndividualEl = document.getElementById('output_individual'); const outputIndexEl = document.getElementById('output_index'); const outputAdditionalImagesEl = document.getElementById('output_additional_images'); const additionalOutputGroup = document.getElementById('output-additional-images-group');
+
+    // --- CORRECCIÓN CRÍTICA: Selectores con Scope ---
+    // Usamos selectores de atributo [id="..."] dentro del formulario activo para evitar conflictos de IDs duplicados
+    const outputFilenameEl = form.querySelector('[id="output_filename"]'); 
+    const outputMetatagsEl = form.querySelector('[id="output_metatags"]'); 
+    const outputTitulosEl = form.querySelector('[id="output_titulos"]'); 
+    const outputIndividualEl = form.querySelector('[id="output_individual"]'); 
+    const outputIndexEl = form.querySelector('[id="output_index"]'); 
+    const outputAdditionalImagesEl = form.querySelector('[id="output_additional_images"]'); 
+    const additionalOutputGroup = form.querySelector('[id="output-additional-images-group"]');
+
     if (outputFilenameEl) outputFilenameEl.value = filename;
-    const metaTitle = titulo.replace(/"/g, '“'); let htmlMetaTags = '';
+
+    // Generación de Meta Tags
+    const metaTitle = titulo.replace(/"/g, '“'); 
+    let htmlMetaTags = '';
     htmlMetaTags += `<title>${metaTitle}</title>\n`; if (imgPathIndexFull) htmlMetaTags += `<meta property="og:image" content="${imgPathIndexFull}"/>\n`;
     htmlMetaTags += `<link rel="canonical" href="${canonicalUrl}"/>\n`; htmlMetaTags += `<meta property="og:title" content="${metaTitle} - Transporte y Energia "/>\n`; htmlMetaTags += `<meta property="og:url" content="${canonicalUrl}"/>\n`; htmlMetaTags += `<meta property="og:site_name" content="TransporteyEnergia" />`;
     if (outputMetatagsEl) outputMetatagsEl.value = htmlMetaTags;
 
-
-    // nombre del titulos 
-    let htmlTitulos = ''; if (modo_antonio_rossi) {
+    // Generación de Títulos
+    let htmlTitulos = ''; 
+    if (modo_antonio_rossi) {
         htmlTitulos = `<li><dd><a href="${urlTitulosRossi}">${fechaListaTitulos} - ${titulo} </a></dd></li>`;
     } else {
         htmlTitulos = `<li><dd><a href="${urlIndividual}">\n ${fechaListaTitulos} - ${titulo}</a></dd></li>`;
-    } if (outputTitulosEl) outputTitulosEl.value = htmlTitulos;
+    } 
+    if (outputTitulosEl) outputTitulosEl.value = htmlTitulos;
+
+    // Generación Individual
     let htmlIndividual = '';
-
-
-
     htmlIndividual += `<h4><span class="sidebar">${fechaSidebar}</span><br/></h4>\n`;
     htmlIndividual += `<Titulo>${titulo}</Titulo><br /><br />\n`;
     if (bajada || modo_antonio_rossi) { htmlIndividual += `<Bajada>${bajada || ''}`; if (modo_antonio_rossi) { htmlIndividual += `<br/><br/>Por Antonio Rossi `; } htmlIndividual += `</Bajada><br/><br/>\n`; }
     if (imgPathIndividual) { htmlIndividual += `<img src="${imgPathIndividual}" style="width:100%"/><br/>\n`; htmlIndividual += `<pie>${epigrafe || ''}</pie><br/>\n\n`; }
-    htmlIndividual += `${bodyProcesado}\n\n`; let htmlAdditionalImagesOutput = '', htmlAdditionalImagesIndividual = ''; let imgCounter = 2;
+    htmlIndividual += `${bodyProcesado}\n\n`; 
+    
+    // Imágenes Adicionales
+    let htmlAdditionalImagesOutput = '', htmlAdditionalImagesIndividual = ''; let imgCounter = 2;
     form.querySelectorAll('.additional-image-field').forEach(field => { const url = field.querySelector('.image-url').value; const type = field.querySelector('.image-type-selector').value; const filenameInputAdicional = field.querySelector('.filename-display'); if (!url) return; let imgFilenameAdicional = filenameInputAdicional?.value; const tipoImg = modo_antonio_rossi ? 'AR' : type; if (!imgFilenameAdicional) { imgFilenameAdicional = generateImageFilename(fechaArchivo, tipoImg, imgCounter++); if (filenameInputAdicional) filenameInputAdicional.value = imgFilenameAdicional; } const carpetaIndexAdicional = tipoImg === 'AR' ? 'Imagenes/ImgAntonio/' : 'Imagenes/'; const imgPathIndividualAdicional = (modo_antonio_rossi ? '../../../' : '../../') + carpetaIndexAdicional + imgFilenameAdicional; const imgPathIndexAdicional = carpetaIndexAdicional + imgFilenameAdicional; htmlAdditionalImagesIndividual += `<p><img src="${imgPathIndividualAdicional}" style="width:100%"/></p>\n`; htmlAdditionalImagesOutput += `<p><img src="${imgPathIndexAdicional}" style="width:100%"/></p>\n\n`; });
-    if (htmlAdditionalImagesIndividual) htmlIndividual += htmlAdditionalImagesIndividual; if (fuente) htmlIndividual += `<p>Fuente: ${fuente}</p>\n`; if (outputIndividualEl) outputIndividualEl.value = htmlIndividual.trim();
-    if (additionalOutputGroup && outputAdditionalImagesEl) { if (htmlAdditionalImagesOutput) { additionalOutputGroup.classList.remove('hidden'); outputAdditionalImagesEl.value = htmlAdditionalImagesOutput.trim(); } else { additionalOutputGroup.classList.add('hidden'); outputAdditionalImagesEl.value = ''; } }
-    let htmlIndex = ''; if (modo_antonio_rossi) {
-        htmlIndex = `<div id="seComenta"> <div id="NotaAntonio"><br />\n<a href="Noticias/${urlIndex}">\n<Titulo>${titulo}</Titulo><br /><br />\n`; if (imgPathIndex) htmlIndex += `<img src="${imgPathIndex}" style="width:100%"/><br/>\n`; const parrafos = bajada ? [bajada, ...obtenerPrimerosParrafos(body, 2)] : obtenerPrimerosParrafos(body, 2); if (parrafos.length > 0) htmlIndex += parrafos.map(p => `<p>${p}</p>`).join('\n') + '\n';
-
-
-        htmlIndex += `</a></div></div>`;
+    
+    if (htmlAdditionalImagesIndividual) htmlIndividual += htmlAdditionalImagesIndividual; if (fuente) htmlIndividual += `<p>Fuente: ${fuente}</p>\n`; 
+    if (outputIndividualEl) outputIndividualEl.value = htmlIndividual.trim();
+    
+    if (additionalOutputGroup && outputAdditionalImagesEl) { 
+        if (htmlAdditionalImagesOutput) { 
+            additionalOutputGroup.classList.remove('hidden'); 
+            outputAdditionalImagesEl.value = htmlAdditionalImagesOutput.trim(); 
+        } else { 
+            additionalOutputGroup.classList.add('hidden'); 
+            outputAdditionalImagesEl.value = ''; 
+        } 
     }
-    else {
+
+    // Generación Index
+    let htmlIndex = ''; 
+    if (modo_antonio_rossi) {
+        htmlIndex = `<div id="seComenta"> <div id="NotaAntonio"><br />\n<a href="Noticias/${urlIndex}">\n<Titulo>${titulo}</Titulo><br /><br />\n`; if (imgPathIndex) htmlIndex += `<img src="${imgPathIndex}" style="width:100%"/><br/>\n`; const parrafos = bajada ? [bajada, ...obtenerPrimerosParrafos(body, 2)] : obtenerPrimerosParrafos(body, 2); if (parrafos.length > 0) htmlIndex += parrafos.map(p => `<p>${p}</p>`).join('\n') + '\n';
+        htmlIndex += `</a></div></div>`;
+    } else {
         htmlIndex = `<div class="SubColumna" id="SubColumna"><br />\n<a href="Noticias/${urlIndex}">\n<Titulo>${titulo}</Titulo><br /><br />\n`;
         if (bajada) htmlIndex += `<Bajada>${bajada}</Bajada><br/><br/>\n`;
         if (imgPathIndex) {
@@ -269,6 +411,8 @@ function generarCodigo() {
         } htmlIndex += `</a><p> </p><img src="Imagenes/Galeria/separacion_columna.jpg" width="480" /> </div>`;
     }
     if (outputIndexEl) outputIndexEl.value = htmlIndex.trim();
+
+    // Actualización de Iframe (Esto SÍ usa document.getElementById porque los iframes NO están duplicados)
     updateViewportPreview(document.getElementById('viewport-preview-individual'), htmlIndividual, modo_antonio_rossi, false);
     updateViewportPreview(document.getElementById('viewport-preview-index'), htmlIndex, modo_antonio_rossi, true);
 }
@@ -338,4 +482,23 @@ function updateViewportPreview(iframe, contentHtml, esModoRossi, isIndex = false
 function procesarCuerpo(t) { if (!t) return ''; const l = t.split('\n'); let h = ''; let iL = false; l.forEach(l => { l = l.trim(); l = l.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/<b>(.*?)<\/b>/gi, '<strong>$1</strong>').replace(/<strong>(.*?)<\/strong>/gi, '<strong>$1</strong>'); if (l.startsWith('* ') || l.startsWith('- ')) { if (!iL) { h += '<ul>\n'; iL = true } const i = l.substring(2).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/<b>(.*?)<\/b>/gi, '<strong>$1</strong>'); h += `  <li>${i}</li>\n` } else { if (iL) { h += '</ul>\n'; iL = false } if (l) { h += `<p>${l}</p>\n` } } }); if (iL) h += '</ul>\n'; return h.replace(/<p>\s*<\/p>/g, '').trim() }
 function obtenerPrimerParrafo(t) { return obtenerPrimerosParrafos(t, 1)[0] || ''; }
 function obtenerPrimerosParrafos(t, num) { if (!t) return []; const lineas = t.split('\n'); const parrafos = []; for (let l of lineas) { l = l.trim(); if (l && !l.startsWith('* ') && !l.startsWith('- ')) { parrafos.push(l.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<b>(.*?)<\/b>/gi, '$1').replace(/<strong>(.*?)<\/strong>/gi, '$1')); if (parrafos.length >= num) break; } } return parrafos; }
-function clearOutputs() { document.getElementById('output_filename').value = ''; document.getElementById('output_metatags').value = ''; document.getElementById('output_titulos').value = ''; document.getElementById('output_individual').value = ''; document.getElementById('output_index').value = ''; document.getElementById('output_additional_images').value = ''; document.getElementById('output-additional-images-group').classList.add('hidden'); }
+function clearOutputs() {
+    const form = getActiveForm();
+    if (!form) return;
+    
+    // Función helper para limpiar si existe el elemento
+    const clear = (selector) => {
+        const el = form.querySelector(selector);
+        if (el) el.value = '';
+    };
+
+    clear('[id="output_filename"]');
+    clear('[id="output_metatags"]');
+    clear('[id="output_titulos"]');
+    clear('[id="output_individual"]');
+    clear('[id="output_index"]');
+    clear('[id="output_additional_images"]');
+    
+    const group = form.querySelector('[id="output-additional-images-group"]');
+    if (group) group.classList.add('hidden');
+}
