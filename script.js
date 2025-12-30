@@ -210,6 +210,39 @@ function loadTabData(tabId) {
 
 // --- LISTENERS ---
 function setupGlobalListeners() {
+
+
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    if (themeBtn) {
+        // Cargar preferencia guardada
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+            themeBtn.textContent = '☀️'; // Icono de Sol
+        }
+
+        themeBtn.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            
+            // Cambiar icono
+            themeBtn.textContent = isDark ? '☀️' : '🌙';
+            
+            // Guardar preferencia
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+    }
+    const togglePreviewBtn = document.getElementById('toggle-preview-btn');
+    const previewColumn = document.getElementById('preview-column');
+    
+    if (togglePreviewBtn && previewColumn) {
+        togglePreviewBtn.addEventListener('click', () => {
+            previewColumn.classList.toggle('minimized');
+            
+            // Opcional: Cambiar el icono o título si quisieras ser más específico
+            // Pero con CSS rotate(180deg) suele ser suficiente y más elegante.
+        });
+    }
     const tabContainer = document.getElementById('tab-buttons');
     
     tabContainer.addEventListener('click', (event) => {

@@ -12,7 +12,10 @@
     <div class="main-layout">
         <div class="form-column">
             <div class="container">
-                <h1>📰 Generador de Contenido Web</h1>
+                <div class="header-row">
+                    <h1>📰 Generador de Contenido Web</h1>
+                    <button id="theme-toggle-btn" class="theme-btn" title="Alternar Modo Oscuro/Claro">🌙</button>
+                </div>
                 <p>Gestiona y genera el código para tus noticias.</p>
                 <hr>
 
@@ -26,18 +29,22 @@
             </div>
         </div>
 
-        <div class="preview-column">
-            <h2>Vista Previa (Simulación)</h2>
+<div class="preview-column minimized" id="preview-column">
+            
+            <div class="preview-header-row">
+                <h2>Vista Previa</h2>
+                <button id="toggle-preview-btn" class="toggle-preview-btn" title="Expandir/Contraer">
+                    ➤ </button>
+            </div>
+
             <div class="preview-tabs">
-                <button class="preview-tab-btn active" data-target="viewport-preview-individual">Página
-                    Individual</button>
+                <button class="preview-tab-btn active" data-target="viewport-preview-individual">Página Individual</button>
                 <button class="preview-tab-btn" data-target="viewport-preview-index">Miniatura Index</button>
             </div>
+            
             <div class="preview-content-container">
-                <iframe id="viewport-preview-individual" class="viewport-preview active"
-                    title="Vista previa de la noticia individual"></iframe>
-                <iframe id="viewport-preview-index" class="viewport-preview"
-                    title="Vista previa de la miniatura del index"></iframe>
+                <iframe id="viewport-preview-individual" class="viewport-preview active" title="Vista previa de la noticia individual"></iframe>
+                <iframe id="viewport-preview-index" class="viewport-preview" title="Vista previa de la miniatura del index"></iframe>
             </div>
         </div>
     </div>
