@@ -217,7 +217,7 @@ function generarCodigo() {
     if (filenameInputPrincipal && !filenameInputPrincipal.value && imgFilenamePrincipal) filenameInputPrincipal.value = imgFilenamePrincipal;
     let filename, urlIndividual, urlIndex, imgPathIndex, carpetaIndex, imgPathIndividual, urlTitulosRossi, canonicalUrl, imgPathIndexFull;
     if (modo_antonio_rossi) {
-        filename = `${slug}.html`; urlIndex = `Noticias/Antonio-Rossi/${anio}/${filename}`; urlIndividual = `../../${urlIndex}`; urlTitulosRossi = `../../Antonio-Rossi/${anio}/${filename}`; carpetaIndex = 'Imagenes/ImgAntonio/'; imgPathIndividual = imgFilenamePrincipal ? `../../../${carpetaIndex}${imgFilenamePrincipal}` : ''; imgPathIndex = imgFilenamePrincipal ? (carpetaIndex + imgFilenamePrincipal) : '';
+        filename = `${slug}.html`; urlIndex = `Antonio-Rossi/${anio}/${filename}`; urlIndividual = `../../${urlIndex}`; urlTitulosRossi = `../../Antonio-Rossi/${anio}/${filename}`; carpetaIndex = 'Imagenes/ImgAntonio/'; imgPathIndividual = imgFilenamePrincipal ? `../../../${carpetaIndex}${imgFilenamePrincipal}` : ''; imgPathIndex = imgFilenamePrincipal ? (carpetaIndex + imgFilenamePrincipal) : '';
     } else {
         filename = `${slug}.html`; urlIndex = `Noticias-${anio}${mes}/${filename}`;
         urlIndividual = `../../${urlIndex}`; carpetaIndex = 'Imagenes/';
@@ -254,7 +254,7 @@ function generarCodigo() {
     if (htmlAdditionalImagesIndividual) htmlIndividual += htmlAdditionalImagesIndividual; if (fuente) htmlIndividual += `<p>Fuente: ${fuente}</p>\n`; if (outputIndividualEl) outputIndividualEl.value = htmlIndividual.trim();
     if (additionalOutputGroup && outputAdditionalImagesEl) { if (htmlAdditionalImagesOutput) { additionalOutputGroup.classList.remove('hidden'); outputAdditionalImagesEl.value = htmlAdditionalImagesOutput.trim(); } else { additionalOutputGroup.classList.add('hidden'); outputAdditionalImagesEl.value = ''; } }
     let htmlIndex = ''; if (modo_antonio_rossi) {
-        htmlIndex = `<div id="seComenta"> <div id="NotaAntonio"><br />\n<a href="${urlIndex}">\n<Titulo>${titulo}</Titulo><br /><br />\n`; if (imgPathIndex) htmlIndex += `<img src="${imgPathIndex}" style="width:100%"/><br/>\n`; const parrafos = bajada ? [bajada, ...obtenerPrimerosParrafos(body, 2)] : obtenerPrimerosParrafos(body, 2); if (parrafos.length > 0) htmlIndex += parrafos.map(p => `<p>${p}</p>`).join('\n') + '\n';
+        htmlIndex = `<div id="seComenta"> <div id="NotaAntonio"><br />\n<a href="Noticias/${urlIndex}">\n<Titulo>${titulo}</Titulo><br /><br />\n`; if (imgPathIndex) htmlIndex += `<img src="${imgPathIndex}" style="width:100%"/><br/>\n`; const parrafos = bajada ? [bajada, ...obtenerPrimerosParrafos(body, 2)] : obtenerPrimerosParrafos(body, 2); if (parrafos.length > 0) htmlIndex += parrafos.map(p => `<p>${p}</p>`).join('\n') + '\n';
 
 
         htmlIndex += `</a></div></div>`;
