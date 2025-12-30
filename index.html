@@ -68,7 +68,6 @@
                     </select>
                     <input type="url" id="imagen_principal" name="imagen_principal" class="image-url"
                         placeholder="https://...">
-                    <button type="button" class="show-name-btn">Mostrar Nombre</button>
                 </div>
                 <div class="image-input-feedback">
                     <div class="image-preview-container">
@@ -116,34 +115,30 @@
 
             <div class="output-area">
                 <h2>Resultados HTML Generados:</h2>
+
                 <div class="form-group output-group filename-output">
                     <label for="output_filename">Nombre Archivo HTML:</label>
                     <input type="text" id="output_filename" readonly>
                     <button type="button" class="copy-btn" data-target="output_filename">Copiar</button>
                 </div>
-                <div class="form-group output-group">
-                    <label for="output_metatags">Meta Tags (para `
 
-                        <head>`):
-                    </label>
-                    <textarea id="output_metatags" readonly></textarea>
-                    <button type="button" class="copy-btn" data-target="output_metatags">Copiar</button>
-                </div>
                 <div class="form-group output-group">
-                    <label for="output_individual">Código Página Individual:</label>
-                    <textarea id="output_individual" readonly></textarea>
-                    <button type="button" class="copy-btn" data-target="output_individual">Copiar</button>
+                    <label for="output_full_html">Código Página Completa (.html):</label>
+                    <textarea id="output_full_html" class="code-output" style="height: 300px;" readonly></textarea>
+                    <button type="button" class="copy-btn" data-target="output_full_html">Copiar</button>
                 </div>
                 <div class="form-group output-group">
                     <label for="output_titulos">Código Lista de Títulos:</label>
                     <textarea id="output_titulos" readonly></textarea>
                     <button type="button" class="copy-btn" data-target="output_titulos">Copiar</button>
                 </div>
+
                 <div class="form-group output-group">
                     <label for="output_index">Código Miniatura (Index):</label>
                     <textarea id="output_index" readonly></textarea>
                     <button type="button" class="copy-btn" data-target="output_index">Copiar</button>
                 </div>
+
                 <div class="form-group output-group output-additional-images-group hidden"
                     id="output-additional-images-group">
                     <label for="output_additional_images">Código Imágenes Adicionales:</label>
