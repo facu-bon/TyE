@@ -32,13 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- GESTIÓN DE PESTAÑAS ---
 function addTab() {
-    // 1. Guardar estado actual antes de crear nueva
     saveCurrentTabData();
     
-    // INTENTO DE HERENCIA: Buscar el tipo seleccionado en la pestaña actual (si existe)
     let inheritedType = 'Transporte';
     if (activeTabId && newsData[activeTabId]) {
-        // Intentamos leer el tipo de la imagen principal de la pestaña activa
         const currentForm = getActiveForm();
         if (currentForm) {
             const currentTypeInput = currentForm.querySelector('.image-group .image-type-selector');
@@ -68,30 +65,22 @@ function addTab() {
     
     document.getElementById('tab-content-container').appendChild(formContainer);
     
-    // APLICAR HERENCIA: Establecer el tipo en la nueva pestaña
     const newForm = formContainer.querySelector('form');
     if (newForm) {
-        // Actualizar input oculto
         const typeInput = newForm.querySelector('.image-group .image-type-selector');
         if (typeInput) typeInput.value = inheritedType;
         
-        // Actualizar visualmente los botones
         const btns = newForm.querySelectorAll('.image-group .type-btn');
         btns.forEach(btn => {
             if (btn.dataset.value === inheritedType) btn.classList.add('active');
             else btn.classList.remove('active');
         });
-    }
-
-    setupListenersForTab(formContainer);
-    
-    newsData[tabId] = { id: tabId, data: {} };
-    
-    // Generar nombre inicial
-    if(newForm) {
+        
         autoUpdateFilename(newForm);
     }
 
+    setupListenersForTab(formContainer);
+    newsData[tabId] = { id: tabId, data: {} };
     switchTab(tabId);
 }
 
@@ -115,7 +104,6 @@ function switchTab(tabId) {
 function closeTab(tabId) {
     const tabButton = document.getElementById(tabId); 
     const tabContent = document.getElementById(tabId.replace('tab-', 'content-')); 
-    const tabDataIndex = Object.keys(newsData).findIndex(key => key === tabId);
     
     if (tabButton && tabContent) {
         const isActive = tabButton.classList.contains('active'); 
@@ -127,10 +115,9 @@ function closeTab(tabId) {
             activeTabId = null; 
             const remainingKeys = Object.keys(newsData);
             if (remainingKeys.length > 0) { 
-                const newActiveIndex = Math.max(0, tabDataIndex - 1); 
-                if (remainingKeys[newActiveIndex]) { switchTab(remainingKeys[newActiveIndex]); } 
-                else if (remainingKeys[0]) { switchTab(remainingKeys[0]); } 
-                else { addTab(); } 
+                const keysAsNumbers = remainingKeys.map(k => parseInt(k.replace('tab-','')));
+                const maxKey = Math.max(...keysAsNumbers);
+                switchTab(`tab-${maxKey}`);
             } else { 
                 addTab(); 
             }
@@ -159,7 +146,7 @@ function saveCurrentTabData() {
 
     dataObject.additionalImages = Array.from(form.querySelectorAll('.additional-image-field')).map(field => ({ 
         url: field.querySelector('.image-url')?.value || '', 
-        type: field.querySelector('.image-type-selector')?.value || 'Transporte', // Lee del input hidden
+        type: field.querySelector('.image-type-selector')?.value || 'Transporte',
         filename: field.querySelector('.filename-display')?.value || ''
     }));
     
@@ -184,7 +171,6 @@ function loadTabData(tabId) {
         } 
     });
     
-    // IMPORTANTE: Sincronizar botones visuales con los valores cargados en los inputs hidden
     form.querySelectorAll('.image-type-selector').forEach(input => {
         const val = input.value;
         const group = input.closest('.type-buttons-group');
@@ -208,42 +194,32 @@ function loadTabData(tabId) {
     }
 }
 
-// --- LISTENERS ---
+// --- LISTENERS GLOBALES ---
 function setupGlobalListeners() {
-
-
+    const tabContainer = document.getElementById('tab-buttons');
+    
     const themeBtn = document.getElementById('theme-toggle-btn');
     if (themeBtn) {
-        // Cargar preferencia guardada
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark') {
             document.body.classList.add('dark-mode');
-            themeBtn.textContent = '☀️'; // Icono de Sol
+            themeBtn.textContent = '☀️';
         }
-
         themeBtn.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
             const isDark = document.body.classList.contains('dark-mode');
-            
-            // Cambiar icono
             themeBtn.textContent = isDark ? '☀️' : '🌙';
-            
-            // Guardar preferencia
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
         });
     }
+
     const togglePreviewBtn = document.getElementById('toggle-preview-btn');
     const previewColumn = document.getElementById('preview-column');
-    
     if (togglePreviewBtn && previewColumn) {
         togglePreviewBtn.addEventListener('click', () => {
             previewColumn.classList.toggle('minimized');
-            
-            // Opcional: Cambiar el icono o título si quisieras ser más específico
-            // Pero con CSS rotate(180deg) suele ser suficiente y más elegante.
         });
     }
-    const tabContainer = document.getElementById('tab-buttons');
     
     tabContainer.addEventListener('click', (event) => {
         const closeBtn = event.target.closest('.close-tab-btn');
@@ -253,7 +229,6 @@ function setupGlobalListeners() {
             if (tabBtn) closeTab(tabBtn.id);
             return;
         }
-
         const tabBtn = event.target.closest('.tab-button');
         if (tabBtn && !tabBtn.classList.contains('active')) {
             switchTab(tabBtn.id);
@@ -265,7 +240,6 @@ function setupGlobalListeners() {
     document.addEventListener('click', (event) => {
         const button = event.target.closest('button');
         if (!button) return;
-
         if (button.classList.contains('copy-btn') && button.hasAttribute('data-target')) {
             handleCopyClick(event);
         }
@@ -288,7 +262,6 @@ function setupListenersForTab(formContainer) {
         const target = event.target.closest('button');
         if (!target) return;
 
-        // --- MANEJO DE LOS NUEVOS BOTONES DE TIPO ---
         if (target.classList.contains('type-btn')) {
             handleTypeButtonClick(target);
             return; 
@@ -313,7 +286,6 @@ function setupListenersForTab(formContainer) {
         updateImagePreview(i);
     });
 
-    // LISTENER CHECKBOX ROSSI (Afecta nombres)
     const rossiCheckbox = formContainer.querySelector('[name="modo_antonio_rossi"]');
     if (rossiCheckbox) {
         rossiCheckbox.addEventListener('change', (event) => {
@@ -327,22 +299,16 @@ function setupListenersForTab(formContainer) {
     }
 }
 
-// --- LÓGICA BOTONES DE TIPO ---
 function handleTypeButtonClick(button) {
     const group = button.closest('.type-buttons-group');
     const hiddenInput = group.querySelector('.image-type-selector');
     const newValue = button.dataset.value;
 
-    // 1. Actualizar Input Oculto
     hiddenInput.value = newValue;
-
-    // 2. Actualizar Visual (Clases Active)
     group.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
     button.classList.add('active');
 
-    // 3. Disparar actualización de nombre de archivo
     const form = button.closest('form');
-    // Verificamos si es imagen principal o adicional
     if (group.closest('.image-group')) {
         autoUpdateFilename(form);
     } else {
@@ -351,13 +317,10 @@ function handleTypeButtonClick(button) {
     }
 }
 
-
-// --- LÓGICA DE AUTONUMERACIÓN ---
 function autoUpdateFilename(form) {
     if (!form) return;
-    
     const rossiCheckbox = form.querySelector('[name="modo_antonio_rossi"]');
-    const typeInput = form.querySelector('.image-group .image-type-selector'); // Input oculto
+    const typeInput = form.querySelector('.image-group .image-type-selector');
     const filenameDisplay = form.querySelector('.image-group .filename-display');
 
     if (!filenameDisplay) return;
@@ -378,9 +341,8 @@ function autoUpdateFilename(form) {
 
 function autoUpdateAdditionalFilename(fieldWrapper, form) {
     const rossiCheckbox = form.querySelector('[name="modo_antonio_rossi"]');
-    const typeInput = fieldWrapper.querySelector('.image-type-selector'); // Input oculto de la adicional
+    const typeInput = fieldWrapper.querySelector('.image-type-selector');
     const filenameDisplay = fieldWrapper.querySelector('.filename-display');
-    
     if (!filenameDisplay) return;
 
     let tipo = 'Transporte';
@@ -393,7 +355,6 @@ function autoUpdateAdditionalFilename(fieldWrapper, form) {
     const hoy = new Date();
     const fechaArchivo = `${hoy.getFullYear()}-${(hoy.getMonth() + 1).toString().padStart(2, '0')}-${hoy.getDate().toString().padStart(2, '0')}`;
     const nextIndex = getNextAvailableIndex(tipo, fechaArchivo);
-    
     filenameDisplay.value = `${fechaArchivo}-${tipo}${nextIndex.toString().padStart(3, '0')}.jpg`;
 }
 
@@ -413,7 +374,6 @@ function getNextAvailableIndex(tipo, fecha) {
     return maxIndex + 1;
 }
 
-// --- GENERACIÓN DE CÓDIGO ---
 function generarCodigo() {
     saveCurrentTabData();
     const currentData = newsData[activeTabId]?.data;
@@ -426,7 +386,6 @@ function generarCodigo() {
     
     const form = getActiveForm();
     const filenameInputPrincipal = form.querySelector('.image-group .filename-display');
-    
     let imgFilenamePrincipal = filenameInputPrincipal?.value;
     if (!imgFilenamePrincipal) {
         autoUpdateFilename(form);
@@ -447,13 +406,6 @@ function generarCodigo() {
     const bodyProcesado = procesarCuerpo(body);
 
     const outputFilenameEl = form.querySelector('[id="output_filename"]'); 
-    const outputFullHtmlEl = form.querySelector('[id="output_individual"]'); 
-    
-    const outputTitulosEl = form.querySelector('[id="output_titulos"]'); 
-    const outputIndexEl = form.querySelector('[id="output_index"]'); 
-    const outputAdditionalImagesEl = form.querySelector('[id="output_additional_images"]'); 
-    const additionalOutputGroup = form.querySelector('[id="output-additional-images-group"]');
-
     if (outputFilenameEl) outputFilenameEl.value = filename;
     
     const metaTitle = titulo.replace(/"/g, '“'); 
@@ -464,9 +416,7 @@ function generarCodigo() {
     htmlMetaTags += `<meta property="og:url" content="${canonicalUrl}"/>\n`; 
     htmlMetaTags += `<meta property="og:site_name" content="TransporteyEnergia" />`;
 
-    const outputMetatagsEl = form.querySelector('[id="output_metatags"]');
-    if (outputMetatagsEl) outputMetatagsEl.value = htmlMetaTags;
-
+    // Generar cuerpo parcial
     let htmlIndividual = '';
     htmlIndividual += `<h4><span class="sidebar">${fechaSidebar}</span><br/></h4>\n`;
     htmlIndividual += `<Titulo>${titulo}</Titulo><br /><br />\n`;
@@ -497,24 +447,32 @@ function generarCodigo() {
     
     if (htmlAdditionalImagesIndividual) htmlIndividual += htmlAdditionalImagesIndividual; if (fuente) htmlIndividual += `<p>Fuente: ${fuente}</p>\n`; 
     
+    // Generar HTML completo
     const htmlPaginaCompleta = construirPaginaCompleta(titulo, htmlMetaTags, htmlIndividual, modo_antonio_rossi);
+    
+    // Inyectar en el cuadro correcto
     if (form.querySelector('[id="output_individual"]')) {
         form.querySelector('[id="output_individual"]').value = htmlPaginaCompleta;
     }
 
-    if (additionalOutputGroup && outputAdditionalImagesEl) { 
+    if (additionalOutputGroup && form.querySelector('[id="output_additional_images"]')) { 
+        const outAdd = form.querySelector('[id="output_additional_images"]');
         if (htmlAdditionalImagesOutput) { 
             additionalOutputGroup.classList.remove('hidden'); 
-            outputAdditionalImagesEl.value = htmlAdditionalImagesOutput.trim(); 
+            outAdd.value = htmlAdditionalImagesOutput.trim(); 
         } else { 
             additionalOutputGroup.classList.add('hidden'); 
-            outputAdditionalImagesEl.value = ''; 
+            outAdd.value = ''; 
         } 
     }
 
-    let htmlTitulos = ''; if (modo_antonio_rossi) { htmlTitulos = `<li><dd><a href="${urlTitulosRossi}">${fechaListaTitulos} - ${titulo} </a></dd></li>`; } else { htmlTitulos = `<li><dd><a href="${urlIndividual}">\n ${fechaListaTitulos} - ${titulo}</a></dd></li>`; } if (outputTitulosEl) outputTitulosEl.value = htmlTitulos;
+    let htmlTitulos = ''; if (modo_antonio_rossi) { htmlTitulos = `<li><dd><a href="${urlTitulosRossi}">${fechaListaTitulos} - ${titulo} </a></dd></li>`; } else { htmlTitulos = `<li><dd><a href="${urlIndividual}">\n ${fechaListaTitulos} - ${titulo}</a></dd></li>`; } 
+    const outputTitulosEl = form.querySelector('[id="output_titulos"]');
+    if (outputTitulosEl) outputTitulosEl.value = htmlTitulos;
 
-    let htmlIndex = ''; if (modo_antonio_rossi) { htmlIndex = `<div id="seComenta"> <div id="NotaAntonio"><br />\n<a href="Noticias/${urlIndex}">\n<Titulo>${titulo}</Titulo><br /><br />\n`; if (imgPathIndex) htmlIndex += `<img src="${imgPathIndex}" style="width:100%"/><br/>\n`; const parrafos = bajada ? [bajada, ...obtenerPrimerosParrafos(body, 2)] : obtenerPrimerosParrafos(body, 2); if (parrafos.length > 0) htmlIndex += parrafos.map(p => `<p>${p}</p>`).join('\n') + '\n'; htmlIndex += `</a></div></div>`; } else { htmlIndex = `<div class="SubColumna" id="SubColumna"><br />\n<a href="Noticias/${urlIndex}">\n<Titulo>${titulo}</Titulo><br /><br />\n`; if (bajada) htmlIndex += `<Bajada>${bajada}</Bajada><br/><br/>\n`; if (imgPathIndex) { htmlIndex += `<div id="fotoInicio"><img src="${imgPathIndex}" style="width:100%"/>\n`; if (epigrafe) htmlIndex += `<div id="epigrafe"><pie>${epigrafe}</pie></div>\n`; htmlIndex += `</div>`; } htmlIndex += `</a><p> </p><img src="Imagenes/Galeria/separacion_columna.jpg" width="480" /> </div>`; } if (outputIndexEl) outputIndexEl.value = htmlIndex.trim();
+    let htmlIndex = ''; if (modo_antonio_rossi) { htmlIndex = `<div id="seComenta"> <div id="NotaAntonio"><br />\n<a href="Noticias/${urlIndex}">\n<Titulo>${titulo}</Titulo><br /><br />\n`; if (imgPathIndex) htmlIndex += `<img src="${imgPathIndex}" style="width:100%"/><br/>\n`; const parrafos = bajada ? [bajada, ...obtenerPrimerosParrafos(body, 2)] : obtenerPrimerosParrafos(body, 2); if (parrafos.length > 0) htmlIndex += parrafos.map(p => `<p>${p}</p>`).join('\n') + '\n'; htmlIndex += `</a></div></div>`; } else { htmlIndex = `<div class="SubColumna" id="SubColumna"><br />\n<a href="Noticias/${urlIndex}">\n<Titulo>${titulo}</Titulo><br /><br />\n`; if (bajada) htmlIndex += `<Bajada>${bajada}</Bajada><br/><br/>\n`; if (imgPathIndex) { htmlIndex += `<div id="fotoInicio"><img src="${imgPathIndex}" style="width:100%"/>\n`; if (epigrafe) htmlIndex += `<div id="epigrafe"><pie>${epigrafe}</pie></div>\n`; htmlIndex += `</div>`; } htmlIndex += `</a><p> </p><img src="Imagenes/Galeria/separacion_columna.jpg" width="480" /> </div>`; } 
+    const outputIndexEl = form.querySelector('[id="output_index"]');
+    if (outputIndexEl) outputIndexEl.value = htmlIndex.trim();
     
     updateViewportPreview(document.getElementById('viewport-preview-individual'), htmlIndividual, modo_antonio_rossi, false);
     updateViewportPreview(document.getElementById('viewport-preview-index'), htmlIndex, modo_antonio_rossi, true);
@@ -722,7 +680,6 @@ function addImageFieldDirect(form, url = '', type = 'Transporte', filename = '')
     const container = form.querySelector('.additional-images-container'); if (!container) return;
     const fieldWrapper = document.createElement('div'); fieldWrapper.className = 'additional-image-field';
     
-    // NOTA: USAMOS EL NUEVO GRUPO DE BOTONES PARA IMÁGENES ADICIONALES
     fieldWrapper.innerHTML = `
         <div class="image-input-controls"> 
             <div class="type-buttons-group">
