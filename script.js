@@ -68,7 +68,31 @@ function addTab() {
     
     const newForm = formContainer.querySelector('form');
     if (newForm) {
-        // Aplicar herencia
+        // --- CORRECCIÓN DE IDs DUPLICADOS ---
+        // Renombramos checkbox y labels para que funcionen en esta pestaña específica
+        const suffix = `_${tabId}`;
+        
+        // Arreglar Checkbox Rossi
+        const rossiCb = newForm.querySelector('input[name="modo_antonio_rossi"]');
+        const rossiLabel = newForm.querySelector('label[for="modo_antonio_rossi"]');
+        if (rossiCb && rossiLabel) {
+            const newId = `modo_antonio_rossi${suffix}`;
+            rossiCb.id = newId;
+            rossiLabel.setAttribute('for', newId);
+        }
+
+        // Arreglar Inputs de Texto (Título, etc) para que al hacer clic en el label vaya al input correcto
+        ['titulo', 'bajada', 'imagen_principal', 'epigrafe', 'body', 'fuente'].forEach(name => {
+            const input = newForm.querySelector(`[name="${name}"]`);
+            const label = newForm.querySelector(`label[for="${name}"]`);
+            if (input && label) {
+                const newId = `${name}${suffix}`;
+                input.id = newId;
+                label.setAttribute('for', newId);
+            }
+        });
+
+        // Aplicar herencia de tipo
         const typeInput = newForm.querySelector('.image-group .image-type-selector');
         if (typeInput) typeInput.value = inheritedType;
         
@@ -142,7 +166,9 @@ function saveCurrentTabData() {
     const dataObject = {}; 
     new FormData(form).forEach((value, key) => dataObject[key] = value); 
     
-    dataObject['modo_antonio_rossi'] = form.querySelector('[name="modo_antonio_rossi"]').checked; 
+    // Checkbox necesita manejo manual porque si no está checkeado no aparece en FormData
+    const rossiCb = form.querySelector('input[name="modo_antonio_rossi"]');
+    dataObject['modo_antonio_rossi'] = rossiCb ? rossiCb.checked : false;
     
     const filenameDisplay = form.querySelector('.filename-display');
     if(filenameDisplay) dataObject['currentFilename'] = filenameDisplay.value;
@@ -186,7 +212,7 @@ function loadTabData(tabId) {
         }
     });
 
-    const rossiCheckbox = form.querySelector('[name="modo_antonio_rossi"]');
+    const rossiCheckbox = form.querySelector('input[name="modo_antonio_rossi"]');
     if(rossiCheckbox) handleRossiModeChange({target: rossiCheckbox});
 
     if(tabData.currentFilename) {
@@ -259,7 +285,7 @@ function setupGlobalListeners() {
         document.querySelectorAll('.viewport-preview').forEach(vp => vp.classList.remove('active'));
         button.classList.add('active'); const targetId = button.getAttribute('data-target');
         const targetViewport = document.getElementById(targetId); if (targetViewport) targetViewport.classList.add('active');
-        const isRossi = getActiveForm()?.querySelector('[name="modo_antonio_rossi"]')?.checked || false;
+        const isRossi = getActiveForm()?.querySelector('input[name="modo_antonio_rossi"]')?.checked || false;
         document.querySelectorAll('.preview-tab-btn.active').forEach(btn => btn.classList.toggle('rossi-mode', isRossi));
     });
 }
@@ -293,7 +319,7 @@ function setupListenersForTab(formContainer) {
         updateImagePreview(i);
     });
 
-    const rossiCheckbox = formContainer.querySelector('[name="modo_antonio_rossi"]');
+    const rossiCheckbox = formContainer.querySelector('input[name="modo_antonio_rossi"]');
     if (rossiCheckbox) {
         rossiCheckbox.addEventListener('change', (event) => {
             handleRossiModeChange(event);
@@ -345,7 +371,7 @@ function handleTypeButtonClick(button) {
 // --- LÓGICA DE AUTONUMERACIÓN ---
 function autoUpdateFilename(form) {
     if (!form) return;
-    const rossiCheckbox = form.querySelector('[name="modo_antonio_rossi"]');
+    const rossiCheckbox = form.querySelector('input[name="modo_antonio_rossi"]');
     const typeInput = form.querySelector('.image-group .image-type-selector');
     const filenameDisplay = form.querySelector('.image-group .filename-display');
 
@@ -366,7 +392,7 @@ function autoUpdateFilename(form) {
 }
 
 function autoUpdateAdditionalFilename(fieldWrapper, form) {
-    const rossiCheckbox = form.querySelector('[name="modo_antonio_rossi"]');
+    const rossiCheckbox = form.querySelector('input[name="modo_antonio_rossi"]');
     const typeInput = fieldWrapper.querySelector('.image-type-selector');
     const filenameDisplay = fieldWrapper.querySelector('.filename-display');
     if (!filenameDisplay) return;
@@ -483,7 +509,7 @@ function generarCodigo() {
     
     if (fuente) {
         if (modo_antonio_rossi && sourceType === 'Nota editada en') {
-            htmlIndividual += `<p>Nota editada en : ${fuente}</p>\n`;
+            htmlIndividual += `<p>Nota editada en ${fuente}</p>\n`;
         } else {
             htmlIndividual += `<p>Fuente: ${fuente}</p>\n`;
         }
@@ -496,7 +522,6 @@ function generarCodigo() {
         outputIndividual.value = htmlPaginaCompleta;
     }
 
-    // AQUI ESTABA EL ERROR: DEFINICION DE VARIABLES ANTES DE USARLAS
     const additionalOutputGroup = form.querySelector('[id="output-additional-images-group"]');
     const outputAdditionalImagesEl = form.querySelector('[id="output_additional_images"]');
 
