@@ -1,4 +1,4 @@
-/* --- VARIABLES DE TEMA (Paleta de Colores) --- */
+/* --- VARIABLES DE TEMA --- */
 :root {
     --bg-body: #f4f4f4;
     --bg-container: #ffffff;
@@ -19,7 +19,6 @@
     --code-bg: #e9ecef;
 }
 
-/* --- OVERRIDES PARA MODO OSCURO --- */
 body.dark-mode {
     --bg-body: #121212;
     --bg-container: #1e1e1e;
@@ -38,7 +37,6 @@ body.dark-mode {
     --code-bg: #2d2d2d;
 }
 
-/* --- ESTILOS GENERALES --- */
 body { font-family: sans-serif; padding: 0; background-color: var(--bg-body); color: var(--text-main); margin: 0; transition: background-color 0.3s, color 0.3s; }
 .main-layout { display: flex; flex-wrap: wrap; gap: 30px; padding: 20px; max-width: 1700px; margin: 0 auto; }
 .form-column { flex: 1; min-width: 550px; }
@@ -87,7 +85,7 @@ textarea { resize: vertical; min-height: 100px; }
 .body-textarea { min-height: 250px; font-family: 'Courier New', Courier, monospace; }
 small { color: var(--text-secondary); display: block; margin-top: 5px; font-size: 0.85em; }
 
-/* NUEVOS BOTONES DE TIPO */
+/* BOTONES DE TIPO */
 .type-buttons-group { display: inline-flex; gap: 0; background-color: var(--border-light); border-radius: 6px; padding: 4px; border: 1px solid var(--border-color); }
 .type-btn { background-color: transparent; color: var(--text-secondary); border: none; padding: 8px 15px; font-size: 0.9em; cursor: pointer; border-radius: 4px; margin: 0; transition: all 0.2s ease; font-weight: 500; }
 .type-btn:hover { background-color: rgba(0,0,0,0.05); }
@@ -95,6 +93,10 @@ small { color: var(--text-secondary); display: block; margin-top: 5px; font-size
 .type-btn[data-value="Transporte"].active { background-color: #007bff; }
 .type-btn[data-value="Energia"].active { background-color: #28a745; }
 .type-btn[data-value="AR"].active { background-color: #dc3545; }
+
+/* Botones de Fuente */
+.type-btn[data-value="Fuente"].active { background-color: #6c757d; }
+.type-btn[data-value="Nota editada en"].active { background-color: #A60000; }
 
 .image-group label { margin-bottom: 8px; }
 .image-input-controls { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }

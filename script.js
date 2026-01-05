@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function addTab() {
     saveCurrentTabData();
     
+    // Herencia de tipo
     let inheritedType = 'Transporte';
     if (activeTabId && newsData[activeTabId]) {
         const currentForm = getActiveForm();
@@ -67,6 +68,7 @@ function addTab() {
     
     const newForm = formContainer.querySelector('form');
     if (newForm) {
+        // Aplicar herencia
         const typeInput = newForm.querySelector('.image-group .image-type-selector');
         if (typeInput) typeInput.value = inheritedType;
         
@@ -76,6 +78,7 @@ function addTab() {
             else btn.classList.remove('active');
         });
         
+        // Calcular nombre automáticamente
         autoUpdateFilename(newForm);
     }
 
@@ -171,7 +174,8 @@ function loadTabData(tabId) {
         } 
     });
     
-    form.querySelectorAll('.image-type-selector').forEach(input => {
+    // Sincronizar botones visuales
+    form.querySelectorAll('input[type="hidden"]').forEach(input => {
         const val = input.value;
         const group = input.closest('.type-buttons-group');
         if (group) {
@@ -181,6 +185,9 @@ function loadTabData(tabId) {
             });
         }
     });
+
+    const rossiCheckbox = form.querySelector('[name="modo_antonio_rossi"]');
+    if(rossiCheckbox) handleRossiModeChange({target: rossiCheckbox});
 
     if(tabData.currentFilename) {
         const fd = form.querySelector('.filename-display');
@@ -299,9 +306,27 @@ function setupListenersForTab(formContainer) {
     }
 }
 
+// --- LÓGICA DE INTERFAZ ---
+function handleRossiModeChange(event) {
+    const isChecked = event.target.checked;
+    const form = event.target.closest('form');
+    const container = event.target.closest('.container');
+    
+    if (container) { container.classList.toggle('rossi-mode', isChecked); }
+    document.querySelectorAll('.preview-tab-btn.active').forEach(btn => btn.classList.toggle('rossi-mode', isChecked));
+
+    if(form) {
+        const sourceButtons = form.querySelector('.source-type-controls');
+        if(sourceButtons) {
+            if(isChecked) sourceButtons.classList.remove('hidden');
+            else sourceButtons.classList.add('hidden');
+        }
+    }
+}
+
 function handleTypeButtonClick(button) {
     const group = button.closest('.type-buttons-group');
-    const hiddenInput = group.querySelector('.image-type-selector');
+    const hiddenInput = group.querySelector('input[type="hidden"]');
     const newValue = button.dataset.value;
 
     hiddenInput.value = newValue;
@@ -309,14 +334,15 @@ function handleTypeButtonClick(button) {
     button.classList.add('active');
 
     const form = button.closest('form');
+    
     if (group.closest('.image-group')) {
         autoUpdateFilename(form);
-    } else {
-        const field = group.closest('.additional-image-field');
-        if (field) autoUpdateAdditionalFilename(field, form);
+    } else if (group.closest('.additional-image-field')) {
+        autoUpdateAdditionalFilename(group.closest('.additional-image-field'), form);
     }
 }
 
+// --- LÓGICA DE AUTONUMERACIÓN ---
 function autoUpdateFilename(form) {
     if (!form) return;
     const rossiCheckbox = form.querySelector('[name="modo_antonio_rossi"]');
@@ -374,17 +400,22 @@ function getNextAvailableIndex(tipo, fecha) {
     return maxIndex + 1;
 }
 
+// --- GENERACIÓN DE CÓDIGO ---
 function generarCodigo() {
     saveCurrentTabData();
     const currentData = newsData[activeTabId]?.data;
     if (!currentData) { alert("Error: No se encontraron datos."); return; }
     
     const { titulo = '', imagen_principal = '', body = '', modo_antonio_rossi = false, bajada = '', imagen_principal_type = 'Transporte', epigrafe = '', fuente = '', additionalImages = [] } = currentData;
+    
+    const form = getActiveForm();
+    const sourceTypeInput = form.querySelector('[name="source_type"]');
+    const sourceType = sourceTypeInput ? sourceTypeInput.value : 'Fuente'; 
+
     if (!titulo || !body) { alert("Completa Título y Cuerpo."); return; }
     
     const hoy = new Date(); const anio = hoy.getFullYear(); const mes = (hoy.getMonth() + 1).toString().padStart(2, '0'); const dia = hoy.getDate().toString().padStart(2, '0'); const fechaSidebar = `${dia}/${mes}/${anio.toString().substr(-2)}`; const fechaArchivo = `${anio}-${mes}-${dia}`; const fechaListaTitulos = `${dia}.${mes}.${anio.toString().substr(-2)}`; const slug = slugify(titulo);
     
-    const form = getActiveForm();
     const filenameInputPrincipal = form.querySelector('.image-group .filename-display');
     let imgFilenamePrincipal = filenameInputPrincipal?.value;
     if (!imgFilenamePrincipal) {
@@ -416,7 +447,10 @@ function generarCodigo() {
     htmlMetaTags += `<meta property="og:url" content="${canonicalUrl}"/>\n`; 
     htmlMetaTags += `<meta property="og:site_name" content="TransporteyEnergia" />`;
 
-    // Generar cuerpo parcial
+    const outputMetatagsEl = form.querySelector('[id="output_metatags"]');
+    if (outputMetatagsEl) outputMetatagsEl.value = htmlMetaTags;
+
+    // Generar cuerpo individual
     let htmlIndividual = '';
     htmlIndividual += `<h4><span class="sidebar">${fechaSidebar}</span><br/></h4>\n`;
     htmlIndividual += `<Titulo>${titulo}</Titulo><br /><br />\n`;
@@ -445,24 +479,34 @@ function generarCodigo() {
         htmlAdditionalImagesOutput += `<p><img src="${imgPathIndexAdicional}" style="width:100%"/></p>\n\n`; 
     });
     
-    if (htmlAdditionalImagesIndividual) htmlIndividual += htmlAdditionalImagesIndividual; if (fuente) htmlIndividual += `<p>Fuente: ${fuente}</p>\n`; 
+    if (htmlAdditionalImagesIndividual) htmlIndividual += htmlAdditionalImagesIndividual; 
     
-    // Generar HTML completo
+    if (fuente) {
+        if (modo_antonio_rossi && sourceType === 'Nota editada en') {
+            htmlIndividual += `<p>Nota editada en : ${fuente}</p>\n`;
+        } else {
+            htmlIndividual += `<p>Fuente: ${fuente}</p>\n`;
+        }
+    }
+    
     const htmlPaginaCompleta = construirPaginaCompleta(titulo, htmlMetaTags, htmlIndividual, modo_antonio_rossi);
     
-    // Inyectar en el cuadro correcto
-    if (form.querySelector('[id="output_individual"]')) {
-        form.querySelector('[id="output_individual"]').value = htmlPaginaCompleta;
+    const outputIndividual = form.querySelector('[id="output_individual"]');
+    if (outputIndividual) {
+        outputIndividual.value = htmlPaginaCompleta;
     }
 
-    if (additionalOutputGroup && form.querySelector('[id="output_additional_images"]')) { 
-        const outAdd = form.querySelector('[id="output_additional_images"]');
+    // AQUI ESTABA EL ERROR: DEFINICION DE VARIABLES ANTES DE USARLAS
+    const additionalOutputGroup = form.querySelector('[id="output-additional-images-group"]');
+    const outputAdditionalImagesEl = form.querySelector('[id="output_additional_images"]');
+
+    if (additionalOutputGroup && outputAdditionalImagesEl) { 
         if (htmlAdditionalImagesOutput) { 
             additionalOutputGroup.classList.remove('hidden'); 
-            outAdd.value = htmlAdditionalImagesOutput.trim(); 
+            outputAdditionalImagesEl.value = htmlAdditionalImagesOutput.trim(); 
         } else { 
             additionalOutputGroup.classList.add('hidden'); 
-            outAdd.value = ''; 
+            outputAdditionalImagesEl.value = ''; 
         } 
     }
 
@@ -478,6 +522,7 @@ function generarCodigo() {
     updateViewportPreview(document.getElementById('viewport-preview-index'), htmlIndex, modo_antonio_rossi, true);
 }
 
+// --- FUNCIÓN DE PLANTILLA COMPLETA ---
 function construirPaginaCompleta(titulo, metaTags, contenidoBody, esModoRossi) {
     let template = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"><head>
@@ -641,12 +686,6 @@ async function handleCopyImageClick(event) {
 
 function updateImagePreviewHandler(event) { updateImagePreview(event.target); }
 function handleIncrementClick(event) { event.preventDefault(); const button = event.target.closest('button'); if (!button) return; const direction = parseInt(button.dataset.direction); changeImageIndex(button, direction); }
-function handleRossiModeChange(event) {
-    const isChecked = event.target.checked;
-    const container = event.target.closest('.container');
-    if (container) { container.classList.toggle('rossi-mode', isChecked); }
-    document.querySelectorAll('.preview-tab-btn.active').forEach(btn => btn.classList.toggle('rossi-mode', isChecked));
-}
 
 function handleFormatBold(event) {
     event.preventDefault(); const form = getActiveForm(); if (!form) return; const textarea = form.querySelector('.body-textarea'); if (!textarea) return;
@@ -680,6 +719,7 @@ function addImageFieldDirect(form, url = '', type = 'Transporte', filename = '')
     const container = form.querySelector('.additional-images-container'); if (!container) return;
     const fieldWrapper = document.createElement('div'); fieldWrapper.className = 'additional-image-field';
     
+    // NOTA: USAMOS EL NUEVO GRUPO DE BOTONES PARA IMÁGENES ADICIONALES
     fieldWrapper.innerHTML = `
         <div class="image-input-controls"> 
             <div class="type-buttons-group">
