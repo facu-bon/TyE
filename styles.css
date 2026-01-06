@@ -42,35 +42,133 @@ body { font-family: sans-serif; padding: 0; background-color: var(--bg-body); co
 .form-column { flex: 1; min-width: 550px; }
 
 /* HEADER */
-.header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-light); margin-bottom: 10px; padding-bottom: 10px; }
+.header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-light); margin-bottom: 20px; padding-bottom: 10px; }
 .header-row h1 { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 .theme-btn { background: none; border: 1px solid var(--border-color); font-size: 1.5em; padding: 5px; border-radius: 50%; cursor: pointer; color: var(--text-main); transition: all 0.3s; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
 .theme-btn:hover { background-color: var(--border-light); }
 
 .container { background-color: var(--bg-container); padding: 25px 30px; border-radius: 8px; box-shadow: 0 2px 5px var(--shadow-color); transition: border-color 0.3s ease, background-color 0.3s; border: 2px solid transparent; }
 
-/* Rossi Mode Ajustes */
+/* --- NUEVO LAYOUT DE PESTAÑAS LATERALES STICKY --- */
+.editor-wrapper { display: flex; gap: 20px; align-items: flex-start; min-height: 500px; position: relative; }
+
+.tabs-container { 
+    display: flex; 
+    flex-direction: column; 
+    width: 180px; 
+    flex-shrink: 0; 
+    border-bottom: none; 
+    border-right: 2px solid var(--border-color); 
+    margin-bottom: 0; 
+    padding-right: 10px;
+    transition: border-color 0.3s ease;
+    
+    /* STICKY */
+    position: -webkit-sticky; 
+    position: sticky;
+    top: 20px; 
+    max-height: calc(100vh - 40px);
+    overflow-y: auto; /* Scroll para todo el panel si es muy alto */
+}
+
+.tab-buttons { 
+    display: flex; 
+    flex-direction: column; 
+    flex-grow: 0; /* No crece infinitamente */
+    gap: 5px;
+}
+
+.tab-button { 
+    width: 100%;
+    padding: 12px 15px; 
+    cursor: pointer; 
+    border: 1px solid var(--border-color); 
+    border-right: none; 
+    background-color: var(--tab-bg-inactive); 
+    margin-right: 0; 
+    border-radius: 6px 0 0 6px; 
+    font-size: 0.9em; 
+    color: var(--tab-text-inactive); 
+    white-space: nowrap; 
+    position: relative; 
+    text-align: left;
+    transition: all 0.3s ease; 
+    border-left: 4px solid transparent; /* Indicador de color */
+}
+
+/* Base Active Style */
+.tab-button.active { 
+    background-color: var(--primary-color); 
+    color: white; 
+    border-color: var(--primary-color); 
+    margin-right: -12px; 
+    padding-right: 25px; 
+    z-index: 2;
+    box-shadow: -2px 2px 5px rgba(0,0,0,0.1);
+}
+
+.tab-button .close-tab-btn { position: absolute; top: 50%; right: 5px; transform: translateY(-50%); background: none; border: none; color: inherit; font-size: 1.1em; cursor: pointer; padding: 0 3px; line-height: 1; }
+.tab-button:not(.active) .close-tab-btn { color: #888; }
+.tab-button .close-tab-btn:hover { color: var(--danger-color); }
+
+.add-tab-btn { 
+    width: 100%;
+    margin-left: 0;
+    margin-top: 10px;
+    padding: 8px 10px; 
+    font-size: 1.2em; 
+    background-color: var(--success-color); 
+    color: white; 
+    border: none; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    line-height: 1; 
+}
+.add-tab-btn:hover { filter: brightness(0.9); }
+
+/* --- ESTILOS BOTONES GLOBALES --- */
+.global-actions {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 10px;
+}
+
+.global-btn {
+    width: 100%;
+    margin: 0;
+    padding: 8px;
+    font-size: 0.85em;
+    font-weight: bold;
+    color: white;
+    border-radius: 4px;
+    transition: opacity 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.global-btn:hover { opacity: 0.9; }
+
+.btn-transporte { background-color: #007bff; } 
+.btn-energia { background-color: #28a745; } 
+
+.tab-content-container { flex-grow: 1; width: 100%; min-width: 0; }
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Rossi Mode Ajustes Generales */
 .container.rossi-mode { border-color: #A60000; }
 .container.rossi-mode h1 { color: #A60000; }
-.container.rossi-mode .tabs-container { border-bottom-color: #A60000; }
+.container.rossi-mode .tabs-container { border-right-color: #A60000; border-bottom-color: transparent; }
 .container.rossi-mode .tab-button.active { background-color: #A60000; border-color: #A60000; }
 .container.rossi-mode .main-btn { background-color: #A60000; }
 .container.rossi-mode .main-btn:hover { background-color: #800000; }
 .container.rossi-mode input:focus, .container.rossi-mode textarea:focus, .container.rossi-mode select:focus { border-color: #A60000; }
 .container.rossi-mode .checkbox-group input[type="checkbox"] { accent-color: #A60000; }
 
-.tabs-container { display: flex; border-bottom: 2px solid var(--primary-color); margin-bottom: 20px; align-items: center; transition: border-color 0.3s ease; }
-.tab-buttons { display: flex; flex-grow: 1; overflow-x: auto; }
-.tab-button { padding: 10px 15px; cursor: pointer; border: 1px solid var(--border-color); border-bottom: none; background-color: var(--tab-bg-inactive); margin-right: 5px; border-radius: 6px 6px 0 0; font-size: 0.9em; color: var(--tab-text-inactive); white-space: nowrap; position: relative; padding-right: 25px; transition: all 0.3s ease; }
-.tab-button.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
-.tab-button .close-tab-btn { position: absolute; top: 50%; right: 5px; transform: translateY(-50%); background: none; border: none; color: inherit; font-size: 1.1em; cursor: pointer; padding: 0 3px; line-height: 1; }
-.tab-button:not(.active) .close-tab-btn { color: #888; }
-.tab-button .close-tab-btn:hover { color: var(--danger-color); }
-.add-tab-btn { padding: 5px 10px; font-size: 1.2em; background-color: var(--success-color); color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; line-height: 1; margin-top: 0; }
-.add-tab-btn:hover { filter: brightness(0.9); }
-
-.tab-content { display: none; }
-.tab-content.active { display: block; }
 h1 { color: var(--primary-color); font-size: 1.8em; margin-top: 0; }
 h2 { color: var(--primary-color); margin-bottom: 20px; margin-top: 30px; font-size: 1.4em; border-bottom: 1px solid var(--border-light); padding-bottom: 8px; }
 p { line-height: 1.6; margin-bottom: 10px; }
@@ -165,5 +263,38 @@ button:active { transform: scale(0.98); }
 .hidden { display: none; }
 .required-asterisk { color: var(--danger-color); font-weight: bold; margin-left: 3px; }
 
-@media (max-width: 1200px) { .preview-column { width: 100%; max-width: none; position: static; height: 70vh; margin-top: 30px; order: 2; } .form-column { order: 1; min-width: auto; width: 100%; } }
-@media (max-width: 767px) { .container { padding: 20px; } .image-input-controls, .image-input-feedback { flex-direction: column; align-items: stretch; } .image-preview-container { width: 100%; height: 150px; } .filename-display-group { width: 100%; } .additional-image-field { flex-direction: column; } .header-row h1 { font-size: 1.5em; } }
+/* === COLORES DE PESTAÑAS (NUEVO) === */
+/* Transporte: Azul */
+.tab-btn-transporte.active { background-color: #007bff; border-color: #007bff; }
+.tab-btn-transporte:not(.active) { border-left-color: #007bff; color: #007bff; font-weight: bold; }
+
+/* Energia: Verde */
+.tab-btn-energia.active { background-color: #28a745; border-color: #28a745; }
+.tab-btn-energia:not(.active) { border-left-color: #28a745; color: #28a745; font-weight: bold; }
+
+/* Rossi: Rojo */
+.tab-btn-ar.active { background-color: #dc3545; border-color: #dc3545; }
+.tab-btn-ar:not(.active) { border-left-color: #dc3545; color: #dc3545; font-weight: bold; }
+
+/* Responsive para Móviles */
+@media (max-width: 1200px) { 
+    .preview-column { width: 100%; max-width: none; position: static; height: 70vh; margin-top: 30px; order: 2; } 
+    .form-column { order: 1; min-width: auto; width: 100%; } 
+}
+@media (max-width: 767px) { 
+    .container { padding: 20px; } 
+    .editor-wrapper { flex-direction: column; }
+    .tabs-container { width: 100%; border-right: none; border-bottom: 2px solid var(--primary-color); flex-direction: row; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; position: static; max-height: none; }
+    .tab-buttons { flex-direction: row; gap: 5px; }
+    .tab-button { width: auto; border-radius: 6px 6px 0 0; border-bottom: none; border: 1px solid var(--border-color); margin-right: 5px; margin-bottom: 0; border-left: 1px solid var(--border-color); border-top: 4px solid transparent; }
+    
+    /* Ajuste de colores en movil (borde superior en vez de izquierdo) */
+    .tab-btn-transporte:not(.active) { border-left: 1px solid var(--border-color); border-top-color: #007bff; }
+    .tab-btn-energia:not(.active) { border-left: 1px solid var(--border-color); border-top-color: #28a745; }
+    .tab-btn-ar:not(.active) { border-left: 1px solid var(--border-color); border-top-color: #dc3545; }
+
+    .tab-button.active { margin-right: 0; margin-bottom: -2px; padding-right: 15px; }
+    .add-tab-btn { width: auto; margin-left: 10px; margin-top: 0; }
+    .global-actions { flex-direction: row; flex-wrap: wrap; }
+    .global-btn { width: auto; flex: 1; }
+}

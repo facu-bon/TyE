@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Noticias - Final</title>
+    <title>Generador de Noticias - v13</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -17,12 +17,23 @@
                 <p>Gestiona y genera el código para tus noticias.</p>
                 <hr>
 
-                <div id="tabs-container" class="tabs-container">
-                    <div id="tab-buttons" class="tab-buttons"></div>
-                    <button id="add-tab-btn" class="add-tab-btn">+</button>
+                <div class="editor-wrapper">
+                    <div id="tabs-container" class="tabs-container">
+                        <div id="tab-buttons" class="tab-buttons"></div>
+                        
+                        <button id="add-tab-btn" class="add-tab-btn" title="Nueva Noticia">+</button>
+                        
+                        <div class="global-actions">
+                            <hr style="border-color: var(--border-color); margin: 10px 0; opacity: 0.5;">
+                            <small style="display:block; margin-bottom:5px; color:var(--text-secondary); font-size:0.8em; text-align: center;">Copiar Masivo (Index):</small>
+                            <button id="copy-all-transporte" class="global-btn btn-transporte" title="Copiar todos los Index de Transporte">Transporte</button>
+                            <button id="copy-all-energia" class="global-btn btn-energia" title="Copiar todos los Index de Energía">Energía</button>
+                        </div>
+                    </div>
+
+                    <div id="tab-content-container" class="tab-content-container"></div>
                 </div>
 
-                <div id="tab-content-container"></div>
             </div>
         </div>
 

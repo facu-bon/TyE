@@ -90,7 +90,6 @@ function addTab() {
             else btn.classList.remove('active');
         });
 
-        // Aplicar herencia de tipo de fuente
         const sourceTypeInput = newForm.querySelector('input[name="source_type"]');
         if (sourceTypeInput) sourceTypeInput.value = inheritedData.source_type;
         const sourceBtns = newForm.querySelectorAll('.source-type-controls .type-btn');
@@ -102,6 +101,9 @@ function addTab() {
         autoUpdateFilename(newForm);
     }
 
+    // APLICAR COLOR INICIAL A LA PESTAÑA
+    updateTabButtonColor(tabId, inheritedData.imagen_principal_type);
+
     setupListenersForTab(formContainer);
     
     newsData[tabId] = { 
@@ -110,6 +112,21 @@ function addTab() {
     };
 
     switchTab(tabId);
+}
+
+function updateTabButtonColor(tabId, type) {
+    const btn = document.getElementById(tabId);
+    if (!btn) return;
+
+    btn.classList.remove('tab-btn-transporte', 'tab-btn-energia', 'tab-btn-ar');
+
+    if (type === 'Transporte') {
+        btn.classList.add('tab-btn-transporte');
+    } else if (type === 'Energia') {
+        btn.classList.add('tab-btn-energia');
+    } else if (type === 'AR') {
+        btn.classList.add('tab-btn-ar');
+    }
 }
 
 function switchTab(tabId) {
@@ -178,6 +195,13 @@ function saveCurrentTabData() {
         type: field.querySelector('.image-type-selector')?.value || 'Transporte',
         filename: field.querySelector('.filename-display')?.value || ''
     }));
+
+    // GUARDAR OUTPUTS PARA PERSISTENCIA
+    const outputIds = ['output_filename', 'output_individual', 'output_titulos', 'output_index', 'output_additional_images'];
+    outputIds.forEach(id => {
+        const el = form.querySelector(`#${id}`);
+        if (el) dataObject[id] = el.value;
+    });
     
     newsData[activeTabId] = { id: activeTabId, data: dataObject };
 }
@@ -190,8 +214,9 @@ function loadTabData(tabId) {
     form.reset(); 
     form.querySelector('.additional-images-container').innerHTML = '';
     
+    // Restaurar Inputs
     Object.keys(tabData).forEach(key => { 
-        if (key !== 'additionalImages' && key !== 'currentFilename') { 
+        if (!key.startsWith('output_') && key !== 'additionalImages' && key !== 'currentFilename') { 
             const element = form.querySelector(`[name="${key}"]`); 
             if (element) { 
                 if (element.type === 'checkbox') element.checked = !!tabData[key]; 
@@ -199,6 +224,24 @@ function loadTabData(tabId) {
             } 
         } 
     });
+    
+    // Restaurar Outputs
+    const outputIds = ['output_filename', 'output_individual', 'output_titulos', 'output_index', 'output_additional_images'];
+    outputIds.forEach(id => {
+        const el = form.querySelector(`#${id}`);
+        if (el) el.value = tabData[id] || '';
+    });
+
+    // Control de visibilidad adicionales
+    const addImgGroup = form.querySelector('#output-additional-images-group');
+    const addImgOut = form.querySelector('#output_additional_images');
+    if (addImgGroup && addImgOut) {
+        if (addImgOut.value.trim() !== '') {
+            addImgGroup.classList.remove('hidden');
+        } else {
+            addImgGroup.classList.add('hidden');
+        }
+    }
     
     form.querySelectorAll('input[type="hidden"]').forEach(input => {
         const val = input.value;
@@ -214,6 +257,10 @@ function loadTabData(tabId) {
     const rossiCb = form.querySelector('input[name="modo_antonio_rossi"]');
     if(rossiCb) handleRossiModeChange({target: rossiCb});
 
+    // Restaurar color de la pestaña actual
+    const type = tabData['imagen_principal_type'] || 'Transporte';
+    updateTabButtonColor(tabId, type);
+
     if(tabData.currentFilename) {
         const fd = form.querySelector('.filename-display');
         if(fd) fd.value = tabData.currentFilename;
@@ -223,6 +270,11 @@ function loadTabData(tabId) {
 
     if (tabData.additionalImages) { 
         tabData.additionalImages.forEach(img => addImageFieldDirect(form, img.url, img.type, img.filename)); 
+    }
+
+    if (tabData.output_individual || tabData.output_index) {
+        updateViewportPreview(document.getElementById('viewport-preview-individual'), tabData.output_individual || '', rossiCb.checked, false);
+        updateViewportPreview(document.getElementById('viewport-preview-index'), tabData.output_index || '', rossiCb.checked, true);
     }
 }
 
@@ -268,6 +320,9 @@ function setupGlobalListeners() {
 
     document.getElementById('add-tab-btn').onclick = addTab;
 
+    document.getElementById('copy-all-transporte').addEventListener('click', () => copyAllIndices('Transporte'));
+    document.getElementById('copy-all-energia').addEventListener('click', () => copyAllIndices('Energia'));
+
     document.addEventListener('click', (event) => {
         const button = event.target.closest('button');
         if (!button) return;
@@ -286,6 +341,30 @@ function setupGlobalListeners() {
         const isRossi = getActiveForm()?.querySelector('input[name="modo_antonio_rossi"]')?.checked || false;
         document.querySelectorAll('.preview-tab-btn.active').forEach(btn => btn.classList.toggle('rossi-mode', isRossi));
     });
+}
+
+function copyAllIndices(targetType) {
+    saveCurrentTabData(); 
+    let accumulatedHtml = '';
+    let count = 0;
+
+    Object.values(newsData).forEach(tab => {
+        const data = tab.data;
+        if (data.imagen_principal_type === targetType) {
+            if (data.output_index && data.output_index.trim() !== '') {
+                accumulatedHtml += data.output_index + '\n\n';
+                count++;
+            }
+        }
+    });
+
+    if (count === 0) {
+        alert(`No se encontraron noticias de tipo "${targetType}" con código generado.`);
+        return;
+    }
+
+    copyToClipboardString(accumulatedHtml);
+    alert(`Se copiaron ${count} noticias de ${targetType} al portapapeles.`);
 }
 
 function setupListenersForTab(formContainer) {
@@ -360,6 +439,7 @@ function handleTypeButtonClick(button) {
     
     if (group.closest('.image-group')) {
         autoUpdateFilename(form);
+        if(activeTabId) updateTabButtonColor(activeTabId, newValue);
     } else if (group.closest('.additional-image-field')) {
         autoUpdateAdditionalFilename(group.closest('.additional-image-field'), form);
     }
@@ -431,6 +511,10 @@ function generarCodigo() {
     const { titulo = '', imagen_principal = '', body = '', modo_antonio_rossi = false, bajada = '', imagen_principal_type = 'Transporte', epigrafe = '', fuente = '', additionalImages = [] } = currentData;
     
     const form = getActiveForm();
+    
+    const additionalOutputGroup = form.querySelector('[id="output-additional-images-group"]');
+    const outputAdditionalImagesEl = form.querySelector('[id="output_additional_images"]');
+
     const sourceTypeInput = form.querySelector('input[name="source_type"]');
     const sourceType = sourceTypeInput ? sourceTypeInput.value : 'Fuente'; 
 
@@ -472,7 +556,6 @@ function generarCodigo() {
     const outputMetatagsEl = form.querySelector('[id="output_metatags"]');
     if (outputMetatagsEl) outputMetatagsEl.value = htmlMetaTags;
 
-    // Generar cuerpo individual parcial
     let htmlIndividual = '';
     htmlIndividual += `<h4><span class="sidebar">${fechaSidebar}</span><br/></h4>\n`;
     htmlIndividual += `<Titulo>${titulo}</Titulo><br /><br />\n`;
@@ -518,9 +601,6 @@ function generarCodigo() {
         outputIndividual.value = htmlPaginaCompleta;
     }
 
-    const additionalOutputGroup = form.querySelector('[id="output-additional-images-group"]');
-    const outputAdditionalImagesEl = form.querySelector('[id="output_additional_images"]');
-
     if (additionalOutputGroup && outputAdditionalImagesEl) { 
         if (htmlAdditionalImagesOutput) { 
             additionalOutputGroup.classList.remove('hidden'); 
@@ -539,13 +619,13 @@ function generarCodigo() {
     const outputIndexEl = form.querySelector('[id="output_index"]');
     if (outputIndexEl) outputIndexEl.value = htmlIndex.trim();
     
+    saveCurrentTabData();
+
     updateViewportPreview(document.getElementById('viewport-preview-individual'), htmlIndividual, modo_antonio_rossi, false);
     updateViewportPreview(document.getElementById('viewport-preview-index'), htmlIndex, modo_antonio_rossi, true);
 }
 
-// --- FUNCIÓN DE PLANTILLA COMPLETA CORREGIDA (RUTAS RELATIVAS) ---
 function construirPaginaCompleta(titulo, metaTags, contenidoBody, esModoRossi) {
-    // 1. Plantilla ORIGINAL de Dreamweaver con rutas locales
     let template = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"><head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -669,18 +749,14 @@ de dos sectores claves para el país    </div>
 </body>
 </html>`;
 
-    // 2. Definir el prefijo correcto (../../ para Normal, ../../../ para Rossi)
+    // 2. Definir el prefijo relativo correcto
     const prefix = esModoRossi ? '../../../' : '../../';
 
-    // 3. REEMPLAZO INTELIGENTE: Cambiar todas las rutas locales por la relativa correcta
-    // Reemplaza "file:///C|/TyE/" por el prefijo
+    // 3. Reemplazar rutas locales por relativas
     template = template.replace(/file:\/\/\/C\|\/TyE\//g, prefix);
-    
-    // Reemplaza las rutas del script de Costera que tenían muchos niveles
-    // Busca "../../../../Imagenes/" y lo deja como "prefix + Imagenes/"
     template = template.replace(/"\.\.\/\.\.\/\.\.\/\.\.\/Imagenes\//g, `"${prefix}Imagenes/`);
 
-    // Inserción de datos
+    // 4. Inserción de datos
     template = template.replace('<title>Titulo</title>', metaTags);
     template = template.replace('<p>&nbsp;</p>', contenidoBody);
 
@@ -688,6 +764,8 @@ de dos sectores claves para el país    </div>
 }
 
 // --- HELPERS MENORES ---
+function updateImagePreviewHandler(event) { updateImagePreview(event.target); }
+
 function handleCopyClick(event) {
     event.preventDefault(); 
     const button = event.target.closest('button'); 
@@ -707,45 +785,26 @@ function handleCopyClick(event) {
     copyToClipboard(targetElement, button);
 }
 
-async function handleCopyImageClick(event) {
-    event.preventDefault(); const button = event.target.closest('button'); if (!button) return;
-    const wrapper = button.closest('.image-group, .additional-image-field'); const urlInput = wrapper?.querySelector('.image-url'); const url = urlInput?.value;
-    if (!url || !isValidUrl(url)) { alert("La URL de la imagen no es válida."); return; }
-    showCopyFeedback(button, "Copiando...");
-    try {
-        const response = await fetch(url); if (!response.ok) throw new Error(`Error: ${response.statusText}`);
-        const blob = await response.blob(); await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-        showCopyFeedback(button, "¡Imagen Copiada!");
-    } catch (err) { console.error("Error copia:", err); alert("Error al copiar imagen (Posible bloqueo CORS). Intenta abrir la imagen y copiarla manualmente."); showCopyFeedback(button, "Error"); }
+function copyToClipboard(element, button) { 
+    if (!button || !element || typeof element.value === 'undefined') { return; } 
+    const textToCopy = element.value; 
+    copyToClipboardString(textToCopy, button);
 }
 
-function updateImagePreviewHandler(event) { updateImagePreview(event.target); }
-function handleIncrementClick(event) { event.preventDefault(); const button = event.target.closest('button'); if (!button) return; const direction = parseInt(button.dataset.direction); changeImageIndex(button, direction); }
-
-function handleFormatBold(event) {
-    event.preventDefault(); const form = getActiveForm(); if (!form) return; const textarea = form.querySelector('.body-textarea'); if (!textarea) return;
-    const start = textarea.selectionStart, end = textarea.selectionEnd, fullText = textarea.value, selectedText = fullText.substring(start, end);
-    if (selectedText) { textarea.value = `${fullText.substring(0, start)}**${selectedText}**${fullText.substring(end)}`; textarea.focus(); textarea.setSelectionRange(start + 2, end + 2); }
-    else { textarea.value = `${fullText.substring(0, start)}****${fullText.substring(end)}`; textarea.focus(); textarea.setSelectionRange(start + 2, start + 2); }
+function copyToClipboardString(text, button) {
+    if (!text) return; 
+    if (navigator.clipboard && navigator.clipboard.writeText) { 
+        navigator.clipboard.writeText(text).then(() => { 
+            if(button) showCopyFeedback(button); 
+        }).catch(err => { 
+            copyUsingExecCommand(text, button); 
+        }); 
+    } else { 
+        copyUsingExecCommand(text, button); 
+    } 
 }
 
-function handleFormatList(event) {
-    event.preventDefault(); const form = getActiveForm(); if (!form) return; const textarea = form.querySelector('.body-textarea'); if (!textarea) return;
-    const start = textarea.selectionStart, end = textarea.selectionEnd, fullText = textarea.value;
-    const lineStartIndex = fullText.lastIndexOf('\n', start - 1) + 1; let lineEndIndex = fullText.indexOf('\n', end); if (lineEndIndex === -1) lineEndIndex = fullText.length;
-    const selectedLinesText = fullText.substring(lineStartIndex, lineEndIndex); const lines = selectedLinesText.split('\n'); let charsAdded = 0;
-    let allAreLists = lines.every(line => line.trim().startsWith('* ') || line.trim().startsWith('- ') || line.trim() === '');
-    const formattedLines = lines.map(line => {
-        if (line.trim() === '') return line;
-        if (allAreLists) { const unformattedLine = line.replace(/^[\s\t]*[\*\-]\s?/, ''); charsAdded -= (line.length - unformattedLine.length); return unformattedLine; }
-        else { if (!line.trim().startsWith('* ') && !line.trim().startsWith('- ')) { charsAdded += 2; return `* ${line}`; } return line; }
-    });
-    const formattedText = formattedLines.join('\n'); textarea.value = `${fullText.substring(0, lineStartIndex)}${formattedText}${fullText.substring(lineEndIndex)}`;
-    textarea.focus(); textarea.setSelectionRange(lineStartIndex, lineEndIndex + charsAdded);
-}
-
-function copyToClipboard(element, button) { if (!button || !element || typeof element.value === 'undefined') { return; } const textToCopy = element.value; if (!textToCopy) { return; } if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(textToCopy).then(() => { showCopyFeedback(button); }).catch(err => { copyUsingExecCommand(textToCopy, button); }); } else { copyUsingExecCommand(textToCopy, button); } }
-function copyUsingExecCommand(text, button) { const tempTextArea = document.createElement('textarea'); tempTextArea.value = text; tempTextArea.style.position = 'absolute'; tempTextArea.style.left = '-9999px'; document.body.appendChild(tempTextArea); tempTextArea.select(); tempTextArea.setSelectionRange(0, 99999); try { const successful = document.execCommand('copy'); if (successful) { showCopyFeedback(button); } else { alert('No se pudo copiar el texto.'); } } catch (err) { alert('No se pudo copiar el texto.'); } document.body.removeChild(tempTextArea); }
+function copyUsingExecCommand(text, button) { const tempTextArea = document.createElement('textarea'); tempTextArea.value = text; tempTextArea.style.position = 'absolute'; tempTextArea.style.left = '-9999px'; document.body.appendChild(tempTextArea); tempTextArea.select(); tempTextArea.setSelectionRange(0, 99999); try { const successful = document.execCommand('copy'); if (successful && button) { showCopyFeedback(button); } else if (!successful) { alert('No se pudo copiar el texto.'); } } catch (err) { alert('No se pudo copiar el texto.'); } document.body.removeChild(tempTextArea); }
 function showCopyFeedback(button, text = '¡Copiado!') { if (!button) return; const originalText = button.textContent; button.textContent = text; button.classList.add('copied'); setTimeout(() => { button.textContent = originalText; button.classList.remove('copied'); }, 1500); }
 function updateImagePreview(inputEl) { if (!inputEl) return; const group = inputEl.closest('.image-group, .additional-image-field'); if (!group) return; const feedback = group.querySelector('.image-input-feedback'); if (!feedback) return; const previewImg = feedback.querySelector('.image-preview'); const placeholder = feedback.querySelector('.preview-placeholder'); if (!previewImg || !placeholder) return; const url = inputEl.value.trim(); if (isValidUrl(url)) { previewImg.src = url; previewImg.classList.remove('hidden'); placeholder.classList.add('hidden'); previewImg.onerror = () => { previewImg.classList.add('hidden'); placeholder.classList.remove('hidden'); placeholder.textContent = "Error URL"; }; } else { previewImg.classList.add('hidden'); placeholder.classList.remove('hidden'); placeholder.textContent = "Vista Previa"; previewImg.src = "#"; } }
 
