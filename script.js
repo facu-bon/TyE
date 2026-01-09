@@ -196,7 +196,6 @@ function saveCurrentTabData() {
         filename: field.querySelector('.filename-display')?.value || ''
     }));
 
-    // GUARDAR OUTPUTS PARA PERSISTENCIA
     const outputIds = ['output_filename', 'output_individual', 'output_titulos', 'output_index', 'output_additional_images'];
     outputIds.forEach(id => {
         const el = form.querySelector(`#${id}`);
@@ -214,7 +213,6 @@ function loadTabData(tabId) {
     form.reset(); 
     form.querySelector('.additional-images-container').innerHTML = '';
     
-    // Restaurar Inputs
     Object.keys(tabData).forEach(key => { 
         if (!key.startsWith('output_') && key !== 'additionalImages' && key !== 'currentFilename') { 
             const element = form.querySelector(`[name="${key}"]`); 
@@ -225,14 +223,12 @@ function loadTabData(tabId) {
         } 
     });
     
-    // Restaurar Outputs
     const outputIds = ['output_filename', 'output_individual', 'output_titulos', 'output_index', 'output_additional_images'];
     outputIds.forEach(id => {
         const el = form.querySelector(`#${id}`);
         if (el) el.value = tabData[id] || '';
     });
 
-    // Control de visibilidad adicionales
     const addImgGroup = form.querySelector('#output-additional-images-group');
     const addImgOut = form.querySelector('#output_additional_images');
     if (addImgGroup && addImgOut) {
@@ -257,7 +253,6 @@ function loadTabData(tabId) {
     const rossiCb = form.querySelector('input[name="modo_antonio_rossi"]');
     if(rossiCb) handleRossiModeChange({target: rossiCb});
 
-    // Restaurar color de la pestaña actual
     const type = tabData['imagen_principal_type'] || 'Transporte';
     updateTabButtonColor(tabId, type);
 
@@ -625,6 +620,7 @@ function generarCodigo() {
     updateViewportPreview(document.getElementById('viewport-preview-index'), htmlIndex, modo_antonio_rossi, true);
 }
 
+// --- FUNCIÓN DE PLANTILLA COMPLETA CORREGIDA (RUTAS RELATIVAS + TITULO FIX) ---
 function construirPaginaCompleta(titulo, metaTags, contenidoBody, esModoRossi) {
     let template = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"><head>
@@ -756,8 +752,10 @@ de dos sectores claves para el país    </div>
     template = template.replace(/file:\/\/\/C\|\/TyE\//g, prefix);
     template = template.replace(/"\.\.\/\.\.\/\.\.\/\.\.\/Imagenes\//g, `"${prefix}Imagenes/`);
 
-    // 4. Inserción de datos
-    template = template.replace('<title>Titulo</title>', metaTags);
+    // 4. Inserción de datos: TITULO + META TAGS JUNTOS
+    template = template.replace('<title>Titulo</title>', `<title>${titulo}</title>\n${metaTags}`);
+    
+    // Inserción del cuerpo
     template = template.replace('<p>&nbsp;</p>', contenidoBody);
 
     return template;
