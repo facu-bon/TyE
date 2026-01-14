@@ -361,6 +361,7 @@ function copyAllIndices(targetType) {
     copyToClipboardString(accumulatedHtml);
     alert(`Se copiaron ${count} noticias de ${targetType} al portapapeles.`);
 }
+function handleIncrementClick(event) { event.preventDefault(); const button = event.target.closest('button'); if (!button) return; const direction = parseInt(button.dataset.direction); changeImageIndex(button, direction); }
 
 function setupListenersForTab(formContainer) {
     formContainer.addEventListener('click', function (event) {
