@@ -130,7 +130,11 @@ function updateTabButtonColor(tabId, type) {
 }
 
 function switchTab(tabId) {
-    saveCurrentTabData();
+    // GUARDAR datos actuales ANTES de cambiar
+    if (activeTabId) {
+        saveCurrentTabData();
+    }
+    
     activeTabId = tabId;
     
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -142,8 +146,8 @@ function switchTab(tabId) {
     if (contentToShow) contentToShow.classList.add('active');
     if (buttonToActivate) buttonToActivate.classList.add('active');
     
+    // CARGAR datos de la nueva pestaña
     loadTabData(tabId);
-    clearOutputs();
 }
 
 function closeTab(tabId) {
@@ -187,6 +191,10 @@ function saveCurrentTabData() {
     const rossiCb = form.querySelector('input[name="modo_antonio_rossi"]');
     dataObject['modo_antonio_rossi'] = rossiCb ? rossiCb.checked : false;
     
+    // Asegurar que imagen_principal_type se guarde correctamente
+    const imageTypeInput = form.querySelector('input[name="imagen_principal_type"]');
+    if (imageTypeInput) dataObject['imagen_principal_type'] = imageTypeInput.value;
+    
     const filenameDisplay = form.querySelector('.filename-display');
     if(filenameDisplay) dataObject['currentFilename'] = filenameDisplay.value;
 
@@ -196,11 +204,16 @@ function saveCurrentTabData() {
         filename: field.querySelector('.filename-display')?.value || ''
     }));
 
+    // Guardar TODOS los campos de salida explícitamente
     const outputIds = ['output_filename', 'output_individual', 'output_titulos', 'output_index', 'output_additional_images'];
     outputIds.forEach(id => {
         const el = form.querySelector(`#${id}`);
         if (el) dataObject[id] = el.value;
     });
+    
+    // Guardar estado de visibilidad del grupo de imágenes adicionales
+    const addImgGroup = form.querySelector('[id="output-additional-images-group"]');
+    dataObject['output_additional_images_visible'] = addImgGroup ? !addImgGroup.classList.contains('hidden') : false;
     
     newsData[activeTabId] = { id: activeTabId, data: dataObject };
 }
@@ -210,11 +223,21 @@ function loadTabData(tabId) {
     const form = getActiveForm(); 
     if (!form) return; 
     
-    form.reset(); 
+    // Guardar los outputs ANTES de hacer reset
+    const outputsToRestore = {};
+    const outputIds = ['output_filename', 'output_individual', 'output_titulos', 'output_index', 'output_additional_images'];
+    outputIds.forEach(id => {
+        const el = form.querySelector(`#${id}`);
+        if (el) outputsToRestore[id] = el.value;
+    });
+    
+    // Resetear solo los campos de entrada, NO los outputs
+    resetInputFields(form);
     form.querySelector('.additional-images-container').innerHTML = '';
     
+    // Restaurar datos de entrada
     Object.keys(tabData).forEach(key => { 
-        if (!key.startsWith('output_') && key !== 'additionalImages' && key !== 'currentFilename') { 
+        if (!key.startsWith('output_') && key !== 'additionalImages' && key !== 'currentFilename' && key !== 'output_additional_images_visible') { 
             const element = form.querySelector(`[name="${key}"]`); 
             if (element) { 
                 if (element.type === 'checkbox') element.checked = !!tabData[key]; 
@@ -222,23 +245,22 @@ function loadTabData(tabId) {
             } 
         } 
     });
-    
-    const outputIds = ['output_filename', 'output_individual', 'output_titulos', 'output_index', 'output_additional_images'];
-    outputIds.forEach(id => {
-        const el = form.querySelector(`#${id}`);
-        if (el) el.value = tabData[id] || '';
-    });
 
-    const addImgGroup = form.querySelector('#output-additional-images-group');
-    const addImgOut = form.querySelector('#output_additional_images');
-    if (addImgGroup && addImgOut) {
-        if (addImgOut.value.trim() !== '') {
-            addImgGroup.classList.remove('hidden');
-        } else {
+    // Restaurar TODOS los outputs explícitamente
+    restoreOutputFields(form, tabData);
+
+    // Restaurar visibilidad del grupo de imágenes adicionales
+    const addImgGroup = form.querySelector('[id="output-additional-images-group"]');
+    if (addImgGroup && tabData['output_additional_images_visible']) {
+        addImgGroup.classList.remove('hidden');
+    } else if (addImgGroup) {
+        const addImgOut = form.querySelector('#output_additional_images');
+        if (!addImgOut || addImgOut.value.trim() === '') {
             addImgGroup.classList.add('hidden');
         }
     }
     
+    // Actualizar botones de tipo activos
     form.querySelectorAll('input[type="hidden"]').forEach(input => {
         const val = input.value;
         const group = input.closest('.type-buttons-group');
@@ -271,6 +293,33 @@ function loadTabData(tabId) {
         updateViewportPreview(document.getElementById('viewport-preview-individual'), tabData.output_individual || '', rossiCb.checked, false);
         updateViewportPreview(document.getElementById('viewport-preview-index'), tabData.output_index || '', rossiCb.checked, true);
     }
+}
+
+// --- FUNCIONES AUXILIARES PARA RESTAURACIÓN DE DATOS ---
+function resetInputFields(form) {
+    // Resetea solo campos de entrada, NO los outputs
+    const inputsToReset = form.querySelectorAll('input[type="text"], input[type="url"], input[type="hidden"], textarea.body-textarea');
+    inputsToReset.forEach(input => {
+        if (!input.id || !input.id.startsWith('output_')) {
+            input.value = '';
+        }
+    });
+    
+    // Resetear checkboxes
+    form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+    });
+}
+
+function restoreOutputFields(form, tabData) {
+    // Restaurar todos los outputs de forma explícita
+    const outputIds = ['output_filename', 'output_individual', 'output_titulos', 'output_index', 'output_additional_images'];
+    outputIds.forEach(id => {
+        const el = form.querySelector(`#${id}`);
+        if (el && tabData[id]) {
+            el.value = tabData[id];
+        }
+    });
 }
 
 // --- LISTENERS ---
@@ -343,8 +392,14 @@ function copyAllIndices(targetType) {
     let accumulatedHtml = '';
     let count = 0;
 
+    // Debug: Verificar datos disponibles
+    console.log('Datos en newsData:', JSON.stringify(Object.keys(newsData), null, 2));
+    console.log('Buscando tipo:', targetType);
+
     Object.values(newsData).forEach(tab => {
         const data = tab.data;
+        console.log('Verificando tab:', tab.id, 'tipo:', data.imagen_principal_type, 'tiene output_index:', !!data.output_index);
+        
         if (data.imagen_principal_type === targetType) {
             if (data.output_index && data.output_index.trim() !== '') {
                 accumulatedHtml += data.output_index + '\n\n';
@@ -354,7 +409,7 @@ function copyAllIndices(targetType) {
     });
 
     if (count === 0) {
-        alert(`No se encontraron noticias de tipo "${targetType}" con código generado.`);
+        alert(`No se encontraron noticias de tipo "${targetType}" con código generado. Asegúrate de:\n1. Haber generado código (clic en "Generar Código HTML")\n2. Que la noticia sea de tipo ${targetType}`);
         return;
     }
 
@@ -435,7 +490,13 @@ function handleTypeButtonClick(button) {
     
     if (group.closest('.image-group')) {
         autoUpdateFilename(form);
-        if(activeTabId) updateTabButtonColor(activeTabId, newValue);
+        if(activeTabId) {
+            updateTabButtonColor(activeTabId, newValue);
+            // Actualizar imagen_principal_type en newsData inmediatamente
+            if (newsData[activeTabId]) {
+                newsData[activeTabId].data.imagen_principal_type = newValue;
+            }
+        }
     } else if (group.closest('.additional-image-field')) {
         autoUpdateAdditionalFilename(group.closest('.additional-image-field'), form);
     }
