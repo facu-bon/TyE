@@ -416,6 +416,70 @@ function copyAllIndices(targetType) {
     copyToClipboardString(accumulatedHtml);
     alert(`Se copiaron ${count} noticias de ${targetType} al portapapeles.`);
 }
+
+function handleFormatBold(event) {
+    event.preventDefault();
+    const form = event.target.closest('form');
+    const textarea = form.querySelector('textarea[name="body"]');
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+    const beforeText = textarea.value.substring(0, start);
+    const afterText = textarea.value.substring(end);
+    
+    if (selectedText.length === 0) {
+        // Si no hay texto seleccionado, inserta ** **
+        textarea.value = beforeText + '****' + afterText;
+        textarea.selectionStart = textarea.selectionEnd = start + 2;
+    } else {
+        // Si hay texto seleccionado, lo rodea con **
+        textarea.value = beforeText + '**' + selectedText + '**' + afterText;
+        textarea.selectionStart = start;
+        textarea.selectionEnd = end + 4;
+    }
+    
+    textarea.focus();
+}
+
+function handleFormatList(event) {
+    event.preventDefault();
+    const form = event.target.closest('form');
+    const textarea = form.querySelector('textarea[name="body"]');
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+    const beforeText = textarea.value.substring(0, start);
+    const afterText = textarea.value.substring(end);
+    
+    if (selectedText.length === 0) {
+        // Si no hay texto seleccionado, inserta una nueva línea con - 
+        const newText = beforeText + '- ' + afterText;
+        textarea.value = newText;
+        textarea.selectionStart = textarea.selectionEnd = start + 2;
+    } else {
+        // Si hay texto seleccionado, convierte cada línea en item de lista
+        const lines = selectedText.split('\n');
+        const formattedLines = lines.map(line => {
+            // Si la línea ya comienza con - o *, no agregar otro
+            if (line.trim().startsWith('-') || line.trim().startsWith('*')) {
+                return line;
+            }
+            return '- ' + line;
+        });
+        
+        const newSelectedText = formattedLines.join('\n');
+        textarea.value = beforeText + newSelectedText + afterText;
+        textarea.selectionStart = start;
+        textarea.selectionEnd = start + newSelectedText.length;
+    }
+    
+    textarea.focus();
+}
+
 function handleIncrementClick(event) { event.preventDefault(); const button = event.target.closest('button'); if (!button) return; const direction = parseInt(button.dataset.direction); changeImageIndex(button, direction); }
 
 function setupListenersForTab(formContainer) {
